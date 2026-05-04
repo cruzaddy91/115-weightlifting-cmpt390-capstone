@@ -38,6 +38,16 @@ Suggested walkthrough accounts:
 
 The `jon_snow` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
 
+## Access Control Expectations
+
+The seeded users are demo accounts for exercising each role. The core access rules are:
+
+- A head coach represents the organization owner/admin for their own organization.
+- A line coach can create and manage programming only for athletes assigned to that coach.
+- An athlete has one accountable `primary_coach` at a time. That coach can be either a line coach or the head coach.
+- Athletes can view and update only their own assigned programs, workout logs, personal records, and completion data.
+- Head-coach organization endpoints are blocked for line coaches and athletes.
+
 ## Docker Services
 
 `docker-compose.yml` starts three services:
@@ -83,6 +93,7 @@ The harness:
 - waits for backend and frontend readiness;
 - verifies the seeded demo accounts;
 - runs an API UAT flow for program creation, assignment, completion, workout logs, PRs, and Sinclair analytics;
+- checks RBAC denial paths for cross-coach and cross-athlete access;
 - runs auth stress cycles for `Coachone` and `jon_snow`.
 
 Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.

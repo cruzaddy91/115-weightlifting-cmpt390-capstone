@@ -139,6 +139,22 @@ def sample_program_data() -> dict:
     }
 
 
+def create_program(client: HttpClient, token: str, athlete_id: int, unique_name: str):
+    return client.request(
+        "POST",
+        "/api/programs/",
+        {
+            "name": unique_name,
+            "description": "Created by Docker UAT harness.",
+            "start_date": str(date.today()),
+            "end_date": None,
+            "athlete_id": athlete_id,
+            "program_data": sample_program_data(),
+        },
+        token=token,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run Docker API UAT.")
     parser.add_argument("--backend-url", default=os.getenv("BACKEND_URL", "http://localhost:8000"))
@@ -154,6 +170,8 @@ def main() -> int:
     unique = str(int(time.time()))
     temp_coach = f"uat_coach_{unique}"
     temp_athlete = f"uat_athlete_{unique}"
+    rbac_coach_b = f"uat_coach_b_{unique}"
+    rbac_athlete_b = f"uat_athlete_b_{unique}"
 
     ok, detail = frontend_is_html(args.frontend_url, args.timeout)
     check(results, "frontend root returns HTML", ok, detail)
@@ -187,33 +205,54 @@ def main() -> int:
             {"program_count": len(jon_programs) if isinstance(jon_programs, list) else None},
         )
 
+        for path in (
+            "/api/auth/head/org-summary/",
+            "/api/auth/head/roster/",
+            "/api/analytics/head/model-status/",
+        ):
+            status, payload = client.request("GET", path, token=seeded_tokens["Headcoachone"]["access"])
+            expect_status(results, f"Headcoachone can access {path}", status, 200, payload)
+            status, payload = client.request("GET", path, token=seeded_tokens["Coachone"]["access"])
+            expect_status(results, f"Coachone is blocked from {path}", status, 403, payload)
+
         register_user(client, temp_coach, "coach", args.password, args.coach_signup_code)
         register_user(client, temp_athlete, "athlete", args.password)
+        register_user(client, rbac_coach_b, "coach", args.password, args.coach_signup_code)
+        register_user(client, rbac_athlete_b, "athlete", args.password)
         temp_coach_tokens = login(client, temp_coach, args.password)
         temp_athlete_tokens = login(client, temp_athlete, args.password)
+        rbac_coach_b_tokens = login(client, rbac_coach_b, args.password)
+        rbac_athlete_b_tokens = login(client, rbac_athlete_b, args.password)
 
         status, temp_athlete_me = client.request("GET", "/api/auth/me/", token=temp_athlete_tokens["access"])
         expect_status(results, "temporary athlete /api/auth/me/", status, 200, temp_athlete_me)
         athlete_id = temp_athlete_me.get("id") if isinstance(temp_athlete_me, dict) else None
         check(results, "temporary athlete has id", isinstance(athlete_id, int), temp_athlete_me)
 
-        program_payload = {
-            "name": f"Docker UAT Program {unique}",
-            "description": "Created by Docker UAT harness.",
-            "start_date": str(date.today()),
-            "end_date": None,
-            "athlete_id": athlete_id,
-            "program_data": sample_program_data(),
-        }
-        status, created_program = client.request(
-            "POST",
-            "/api/programs/",
-            program_payload,
-            token=temp_coach_tokens["access"],
+        status, rbac_athlete_b_me = client.request("GET", "/api/auth/me/", token=rbac_athlete_b_tokens["access"])
+        expect_status(results, "RBAC athlete B /api/auth/me/", status, 200, rbac_athlete_b_me)
+        athlete_b_id = rbac_athlete_b_me.get("id") if isinstance(rbac_athlete_b_me, dict) else None
+        check(results, "RBAC athlete B has id", isinstance(athlete_b_id, int), rbac_athlete_b_me)
+
+        status, created_program = create_program(
+            client,
+            temp_coach_tokens["access"],
+            athlete_id,
+            f"Docker UAT Program A {unique}",
         )
         expect_status(results, "temporary coach creates program", status, 201, created_program)
         program_id = created_program.get("id") if isinstance(created_program, dict) else None
         check(results, "created program has id", isinstance(program_id, int), created_program)
+
+        status, created_program_b = create_program(
+            client,
+            rbac_coach_b_tokens["access"],
+            athlete_b_id,
+            f"Docker UAT Program B {unique}",
+        )
+        expect_status(results, "RBAC coach B creates program for athlete B", status, 201, created_program_b)
+        program_b_id = created_program_b.get("id") if isinstance(created_program_b, dict) else None
+        check(results, "RBAC program B has id", isinstance(program_b_id, int), created_program_b)
 
         status, updated_program = client.request(
             "PATCH",
@@ -296,6 +335,66 @@ def main() -> int:
             isinstance(sinclair, dict) and "sinclair_total" in sinclair,
             sinclair,
         )
+
+        status, payload = client.request(
+            "GET",
+            f"/api/athletes/prs/?athlete_id={athlete_b_id}",
+            token=temp_coach_tokens["access"],
+        )
+        expect_status(results, "RBAC coach A cannot read athlete B PRs", status, 403, payload)
+
+        status, payload = client.request(
+            "GET",
+            f"/api/athletes/workouts/?athlete_id={athlete_b_id}",
+            token=temp_coach_tokens["access"],
+        )
+        expect_status(results, "RBAC coach A cannot read athlete B workouts", status, 403, payload)
+
+        status, payload = client.request(
+            "PATCH",
+            f"/api/programs/{program_id}/assign/",
+            {"athlete_id": athlete_b_id},
+            token=temp_coach_tokens["access"],
+        )
+        expect_status(results, "RBAC coach A cannot assign program to athlete B", status, 403, payload)
+
+        status, payload = client.request(
+            "POST",
+            "/api/programs/",
+            {
+                "name": f"Forbidden Cross Coach Program {unique}",
+                "description": "Should be blocked by RBAC.",
+                "start_date": str(date.today()),
+                "end_date": None,
+                "athlete_id": athlete_id,
+                "program_data": sample_program_data(),
+            },
+            token=rbac_coach_b_tokens["access"],
+        )
+        expect_status(results, "RBAC coach B cannot create program for athlete A", status, 400, payload)
+
+        status, payload = client.request(
+            "PATCH",
+            f"/api/programs/{program_id}/",
+            {"description": "Cross-coach update should fail."},
+            token=rbac_coach_b_tokens["access"],
+        )
+        expect_status(results, "RBAC coach B cannot patch coach A program", status, 404, payload)
+
+        status, payload = client.request(
+            "GET",
+            f"/api/athletes/program-completion/{program_b_id}/",
+            token=temp_athlete_tokens["access"],
+        )
+        expect_status(results, "RBAC athlete A cannot read athlete B completion", status, 403, payload)
+
+        status, payload = client.request(
+            "PATCH",
+            f"/api/athletes/program-completion/{program_b_id}/",
+            completion_payload,
+            token=temp_athlete_tokens["access"],
+        )
+        expect_status(results, "RBAC athlete A cannot patch athlete B completion", status, 404, payload)
     except Exception as exc:  # noqa: BLE001 - converted to structured report
         check(results, "UAT raised unexpected exception", False, {"error": str(exc)})
 

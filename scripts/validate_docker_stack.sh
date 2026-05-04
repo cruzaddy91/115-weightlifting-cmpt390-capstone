@@ -68,6 +68,7 @@ write_summary() {
 - Backend URL: $BACKEND_URL
 - Frontend URL: $FRONTEND_URL
 - Stress cycles per account: $STRESS_CYCLES
+- RBAC checks: included in docker_uat_latest.json
 - Generated at UTC: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 ## Artifacts
