@@ -1,0 +1,4 @@
+NAME                                            IMAGE                                         COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+115_weightlifting_cmpt390_capstone-backend-1    115_weightlifting_cmpt390_capstone-backend    "./docker-entrypoint…"   backend    21 seconds ago   Up 14 seconds             0.0.0.0:8000->8000/tcp
+115_weightlifting_cmpt390_capstone-frontend-1   115_weightlifting_cmpt390_capstone-frontend   "docker-entrypoint.s…"   frontend   21 seconds ago   Up 14 seconds             0.0.0.0:4173->4173/tcp
+115_weightlifting_cmpt390_capstone-postgres-1   postgres:16-alpine                            "docker-entrypoint.s…"   postgres   21 seconds ago   Up 19 seconds (healthy)   0.0.0.0:5432->5432/tcp

@@ -1,0 +1,1094 @@
+{
+  "backend_url": "http://localhost:8000",
+  "failed": 0,
+  "finished_at": "2026-05-04T22:53:29Z",
+  "frontend_url": "http://localhost:4173",
+  "passed": 24,
+  "results": [
+    {
+      "detail": {
+        "content_type": "text/html",
+        "status": 200
+      },
+      "name": "frontend root returns HTML",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "bodyweight_kg": null,
+          "competitive_weight_class": null,
+          "gender": null,
+          "id": 1,
+          "primary_coach_id": null,
+          "primary_coach_username": null,
+          "reports_to_id": null,
+          "reports_to_username": null,
+          "user_type": "head_coach",
+          "username": "Headcoachone"
+        }
+      },
+      "name": "Headcoachone /api/auth/me/",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bodyweight_kg": null,
+        "competitive_weight_class": null,
+        "gender": null,
+        "id": 1,
+        "primary_coach_id": null,
+        "primary_coach_username": null,
+        "reports_to_id": null,
+        "reports_to_username": null,
+        "user_type": "head_coach",
+        "username": "Headcoachone"
+      },
+      "name": "Headcoachone has expected role",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "bodyweight_kg": null,
+          "competitive_weight_class": null,
+          "gender": null,
+          "id": 2,
+          "primary_coach_id": null,
+          "primary_coach_username": null,
+          "reports_to_id": 1,
+          "reports_to_username": "Headcoachone",
+          "user_type": "coach",
+          "username": "Coachone"
+        }
+      },
+      "name": "Coachone /api/auth/me/",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bodyweight_kg": null,
+        "competitive_weight_class": null,
+        "gender": null,
+        "id": 2,
+        "primary_coach_id": null,
+        "primary_coach_username": null,
+        "reports_to_id": 1,
+        "reports_to_username": "Headcoachone",
+        "user_type": "coach",
+        "username": "Coachone"
+      },
+      "name": "Coachone has expected role",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "bodyweight_kg": "85.00",
+          "competitive_weight_class": "89 kg",
+          "gender": "M",
+          "id": 3,
+          "primary_coach_id": 2,
+          "primary_coach_username": "Coachone",
+          "reports_to_id": null,
+          "reports_to_username": null,
+          "user_type": "athlete",
+          "username": "jon_snow"
+        }
+      },
+      "name": "jon_snow /api/auth/me/",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bodyweight_kg": "85.00",
+        "competitive_weight_class": "89 kg",
+        "gender": "M",
+        "id": 3,
+        "primary_coach_id": 2,
+        "primary_coach_username": "Coachone",
+        "reports_to_id": null,
+        "reports_to_username": null,
+        "user_type": "athlete",
+        "username": "jon_snow"
+      },
+      "name": "jon_snow has expected role",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": [
+          {
+            "athlete_bodyweight_kg": "85.00",
+            "athlete_competitive_weight_class": "89 kg",
+            "athlete_gender": "M",
+            "athlete_id": 3,
+            "athlete_username": "jon_snow",
+            "coach_id": 2,
+            "coach_username": "Coachone",
+            "completion_data": {
+              "entries": {
+                "0": {
+                  "0": {
+                    "athlete_notes": "Ready for demo",
+                    "completed": true,
+                    "result": "completed"
+                  },
+                  "1": {
+                    "athlete_notes": "",
+                    "completed": false,
+                    "result": ""
+                  }
+                }
+              }
+            },
+            "created_at": "2026-05-04T22:53:27.237727Z",
+            "description": "Seeded Docker demo training block for professor review.",
+            "end_date": "2026-05-10",
+            "id": 4,
+            "name": "Current Block -- jon_snow",
+            "normalized_name": "",
+            "program_data": {
+              "days": [
+                {
+                  "day": "Monday",
+                  "exercises": [
+                    {
+                      "intensity": "84%",
+                      "name": "Snatch",
+                      "notes": "Speed under the bar",
+                      "reps": "2",
+                      "sets": "5"
+                    },
+                    {
+                      "intensity": "88%",
+                      "name": "Back Squat",
+                      "notes": "Controlled descent",
+                      "reps": "4",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Wednesday",
+                  "exercises": [
+                    {
+                      "intensity": "86%",
+                      "name": "Clean & Jerk",
+                      "notes": "Own the jerk recovery",
+                      "reps": "1",
+                      "sets": "6"
+                    },
+                    {
+                      "intensity": "96%",
+                      "name": "Clean Pull",
+                      "notes": "Vertical finish",
+                      "reps": "3",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Friday",
+                  "exercises": [
+                    {
+                      "intensity": "78%",
+                      "name": "Power Snatch",
+                      "notes": "Sharp turnover",
+                      "reps": "2",
+                      "sets": "4"
+                    },
+                    {
+                      "intensity": "87%",
+                      "name": "Front Squat",
+                      "notes": "Tall torso",
+                      "reps": "3",
+                      "sets": "3"
+                    }
+                  ]
+                }
+              ],
+              "week_start_date": "2026-05-04"
+            },
+            "start_date": "2026-05-04",
+            "style_tags": [
+              "demo",
+              "weightlifting"
+            ],
+            "updated_at": "2026-05-04T22:53:27.237731Z"
+          },
+          {
+            "athlete_bodyweight_kg": "85.00",
+            "athlete_competitive_weight_class": "89 kg",
+            "athlete_gender": "M",
+            "athlete_id": 3,
+            "athlete_username": "jon_snow",
+            "coach_id": 2,
+            "coach_username": "Coachone",
+            "completion_data": {
+              "entries": {
+                "0": {
+                  "0": {
+                    "athlete_notes": "Moved well",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "Solid squats",
+                    "completed": true,
+                    "result": "done"
+                  }
+                },
+                "1": {
+                  "0": {
+                    "athlete_notes": "Good timing",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "Pulls felt strong",
+                    "completed": true,
+                    "result": "done"
+                  }
+                },
+                "2": {
+                  "0": {
+                    "athlete_notes": "Fast",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "No misses",
+                    "completed": true,
+                    "result": "done"
+                  }
+                }
+              }
+            },
+            "created_at": "2026-05-04T22:53:27.236704Z",
+            "description": "Seeded Docker demo training block for professor review.",
+            "end_date": "2026-04-26",
+            "id": 3,
+            "name": "Accumulation Block 3 -- jon_snow",
+            "normalized_name": "",
+            "program_data": {
+              "days": [
+                {
+                  "day": "Monday",
+                  "exercises": [
+                    {
+                      "intensity": "80%",
+                      "name": "Snatch",
+                      "notes": "Speed under the bar",
+                      "reps": "2",
+                      "sets": "5"
+                    },
+                    {
+                      "intensity": "84%",
+                      "name": "Back Squat",
+                      "notes": "Controlled descent",
+                      "reps": "4",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Wednesday",
+                  "exercises": [
+                    {
+                      "intensity": "82%",
+                      "name": "Clean & Jerk",
+                      "notes": "Own the jerk recovery",
+                      "reps": "1",
+                      "sets": "6"
+                    },
+                    {
+                      "intensity": "92%",
+                      "name": "Clean Pull",
+                      "notes": "Vertical finish",
+                      "reps": "3",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Friday",
+                  "exercises": [
+                    {
+                      "intensity": "75%",
+                      "name": "Power Snatch",
+                      "notes": "Sharp turnover",
+                      "reps": "2",
+                      "sets": "4"
+                    },
+                    {
+                      "intensity": "83%",
+                      "name": "Front Squat",
+                      "notes": "Tall torso",
+                      "reps": "3",
+                      "sets": "3"
+                    }
+                  ]
+                }
+              ],
+              "week_start_date": "2026-04-20"
+            },
+            "start_date": "2026-04-20",
+            "style_tags": [
+              "demo",
+              "weightlifting"
+            ],
+            "updated_at": "2026-05-04T22:53:27.236706Z"
+          },
+          {
+            "athlete_bodyweight_kg": "85.00",
+            "athlete_competitive_weight_class": "89 kg",
+            "athlete_gender": "M",
+            "athlete_id": 3,
+            "athlete_username": "jon_snow",
+            "coach_id": 2,
+            "coach_username": "Coachone",
+            "completion_data": {
+              "entries": {
+                "0": {
+                  "0": {
+                    "athlete_notes": "Moved well",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "Solid squats",
+                    "completed": true,
+                    "result": "done"
+                  }
+                },
+                "1": {
+                  "0": {
+                    "athlete_notes": "Good timing",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "Pulls felt strong",
+                    "completed": true,
+                    "result": "done"
+                  }
+                },
+                "2": {
+                  "0": {
+                    "athlete_notes": "Fast",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "No misses",
+                    "completed": true,
+                    "result": "done"
+                  }
+                }
+              }
+            },
+            "created_at": "2026-05-04T22:53:27.235931Z",
+            "description": "Seeded Docker demo training block for professor review.",
+            "end_date": "2026-04-19",
+            "id": 2,
+            "name": "Accumulation Block 2 -- jon_snow",
+            "normalized_name": "",
+            "program_data": {
+              "days": [
+                {
+                  "day": "Monday",
+                  "exercises": [
+                    {
+                      "intensity": "76%",
+                      "name": "Snatch",
+                      "notes": "Speed under the bar",
+                      "reps": "2",
+                      "sets": "5"
+                    },
+                    {
+                      "intensity": "80%",
+                      "name": "Back Squat",
+                      "notes": "Controlled descent",
+                      "reps": "4",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Wednesday",
+                  "exercises": [
+                    {
+                      "intensity": "78%",
+                      "name": "Clean & Jerk",
+                      "notes": "Own the jerk recovery",
+                      "reps": "1",
+                      "sets": "6"
+                    },
+                    {
+                      "intensity": "88%",
+                      "name": "Clean Pull",
+                      "notes": "Vertical finish",
+                      "reps": "3",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Friday",
+                  "exercises": [
+                    {
+                      "intensity": "71%",
+                      "name": "Power Snatch",
+                      "notes": "Sharp turnover",
+                      "reps": "2",
+                      "sets": "4"
+                    },
+                    {
+                      "intensity": "79%",
+                      "name": "Front Squat",
+                      "notes": "Tall torso",
+                      "reps": "3",
+                      "sets": "3"
+                    }
+                  ]
+                }
+              ],
+              "week_start_date": "2026-04-13"
+            },
+            "start_date": "2026-04-13",
+            "style_tags": [
+              "demo",
+              "weightlifting"
+            ],
+            "updated_at": "2026-05-04T22:53:27.235934Z"
+          },
+          {
+            "athlete_bodyweight_kg": "85.00",
+            "athlete_competitive_weight_class": "89 kg",
+            "athlete_gender": "M",
+            "athlete_id": 3,
+            "athlete_username": "jon_snow",
+            "coach_id": 2,
+            "coach_username": "Coachone",
+            "completion_data": {
+              "entries": {
+                "0": {
+                  "0": {
+                    "athlete_notes": "Moved well",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "Solid squats",
+                    "completed": true,
+                    "result": "done"
+                  }
+                },
+                "1": {
+                  "0": {
+                    "athlete_notes": "Good timing",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "Pulls felt strong",
+                    "completed": true,
+                    "result": "done"
+                  }
+                },
+                "2": {
+                  "0": {
+                    "athlete_notes": "Fast",
+                    "completed": true,
+                    "result": "done"
+                  },
+                  "1": {
+                    "athlete_notes": "No misses",
+                    "completed": true,
+                    "result": "done"
+                  }
+                }
+              }
+            },
+            "created_at": "2026-05-04T22:53:27.234159Z",
+            "description": "Seeded Docker demo training block for professor review.",
+            "end_date": "2026-04-12",
+            "id": 1,
+            "name": "Accumulation Block 1 -- jon_snow",
+            "normalized_name": "",
+            "program_data": {
+              "days": [
+                {
+                  "day": "Monday",
+                  "exercises": [
+                    {
+                      "intensity": "72%",
+                      "name": "Snatch",
+                      "notes": "Speed under the bar",
+                      "reps": "2",
+                      "sets": "5"
+                    },
+                    {
+                      "intensity": "76%",
+                      "name": "Back Squat",
+                      "notes": "Controlled descent",
+                      "reps": "4",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Wednesday",
+                  "exercises": [
+                    {
+                      "intensity": "74%",
+                      "name": "Clean & Jerk",
+                      "notes": "Own the jerk recovery",
+                      "reps": "1",
+                      "sets": "6"
+                    },
+                    {
+                      "intensity": "84%",
+                      "name": "Clean Pull",
+                      "notes": "Vertical finish",
+                      "reps": "3",
+                      "sets": "4"
+                    }
+                  ]
+                },
+                {
+                  "day": "Friday",
+                  "exercises": [
+                    {
+                      "intensity": "67%",
+                      "name": "Power Snatch",
+                      "notes": "Sharp turnover",
+                      "reps": "2",
+                      "sets": "4"
+                    },
+                    {
+                      "intensity": "75%",
+                      "name": "Front Squat",
+                      "notes": "Tall torso",
+                      "reps": "3",
+                      "sets": "3"
+                    }
+                  ]
+                }
+              ],
+              "week_start_date": "2026-04-06"
+            },
+            "start_date": "2026-04-06",
+            "style_tags": [
+              "demo",
+              "weightlifting"
+            ],
+            "updated_at": "2026-05-04T22:53:27.234166Z"
+          }
+        ]
+      },
+      "name": "jon_snow can retrieve assigned programs",
+      "passed": true
+    },
+    {
+      "detail": {
+        "program_count": 4
+      },
+      "name": "jon_snow has at least one assigned program",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "bodyweight_kg": null,
+          "competitive_weight_class": null,
+          "gender": null,
+          "id": 9,
+          "primary_coach_id": null,
+          "primary_coach_username": null,
+          "reports_to_id": null,
+          "reports_to_username": null,
+          "user_type": "athlete",
+          "username": "uat_athlete_1777935208"
+        }
+      },
+      "name": "temporary athlete /api/auth/me/",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bodyweight_kg": null,
+        "competitive_weight_class": null,
+        "gender": null,
+        "id": 9,
+        "primary_coach_id": null,
+        "primary_coach_username": null,
+        "reports_to_id": null,
+        "reports_to_username": null,
+        "user_type": "athlete",
+        "username": "uat_athlete_1777935208"
+      },
+      "name": "temporary athlete has id",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 201,
+        "expected": 201,
+        "payload": {
+          "athlete_bodyweight_kg": null,
+          "athlete_competitive_weight_class": null,
+          "athlete_gender": null,
+          "athlete_id": 9,
+          "athlete_username": "uat_athlete_1777935208",
+          "coach_id": 8,
+          "coach_username": "uat_coach_1777935208",
+          "completion_data": null,
+          "created_at": "2026-05-04T22:53:29.069927Z",
+          "description": "Created by Docker UAT harness.",
+          "end_date": null,
+          "id": 5,
+          "name": "Docker UAT Program 1777935208",
+          "normalized_name": "docker uat program 1777935208",
+          "program_data": {
+            "days": [
+              {
+                "day": "Docker UAT Day 1",
+                "exercises": [
+                  {
+                    "intensity": "",
+                    "name": "Back Squat",
+                    "notes": "Docker UAT validation row",
+                    "percent_1rm": "80",
+                    "reps": "3",
+                    "rest": "2 min",
+                    "rpe": "7",
+                    "sets": "5",
+                    "tempo": "controlled",
+                    "week": "1",
+                    "weight": "120"
+                  }
+                ],
+                "id": "d0"
+              }
+            ],
+            "intensity_mode": "percent_1rm",
+            "week_start_date": "2026-05-04"
+          },
+          "start_date": "2026-05-04",
+          "style_tags": [
+            "block:1wk",
+            "intensity_mode:percent_1rm",
+            "style:strength"
+          ],
+          "updated_at": "2026-05-04T22:53:29.069934Z"
+        }
+      },
+      "name": "temporary coach creates program",
+      "passed": true
+    },
+    {
+      "detail": {
+        "athlete_bodyweight_kg": null,
+        "athlete_competitive_weight_class": null,
+        "athlete_gender": null,
+        "athlete_id": 9,
+        "athlete_username": "uat_athlete_1777935208",
+        "coach_id": 8,
+        "coach_username": "uat_coach_1777935208",
+        "completion_data": null,
+        "created_at": "2026-05-04T22:53:29.069927Z",
+        "description": "Created by Docker UAT harness.",
+        "end_date": null,
+        "id": 5,
+        "name": "Docker UAT Program 1777935208",
+        "normalized_name": "docker uat program 1777935208",
+        "program_data": {
+          "days": [
+            {
+              "day": "Docker UAT Day 1",
+              "exercises": [
+                {
+                  "intensity": "",
+                  "name": "Back Squat",
+                  "notes": "Docker UAT validation row",
+                  "percent_1rm": "80",
+                  "reps": "3",
+                  "rest": "2 min",
+                  "rpe": "7",
+                  "sets": "5",
+                  "tempo": "controlled",
+                  "week": "1",
+                  "weight": "120"
+                }
+              ],
+              "id": "d0"
+            }
+          ],
+          "intensity_mode": "percent_1rm",
+          "week_start_date": "2026-05-04"
+        },
+        "start_date": "2026-05-04",
+        "style_tags": [
+          "block:1wk",
+          "intensity_mode:percent_1rm",
+          "style:strength"
+        ],
+        "updated_at": "2026-05-04T22:53:29.069934Z"
+      },
+      "name": "created program has id",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "athlete_bodyweight_kg": null,
+          "athlete_competitive_weight_class": null,
+          "athlete_gender": null,
+          "athlete_id": 9,
+          "athlete_username": "uat_athlete_1777935208",
+          "coach_id": 8,
+          "coach_username": "uat_coach_1777935208",
+          "completion_data": null,
+          "created_at": "2026-05-04T22:53:29.069927Z",
+          "description": "Updated by Docker UAT harness.",
+          "end_date": null,
+          "id": 5,
+          "name": "Docker UAT Program 1777935208",
+          "normalized_name": "docker uat program 1777935208",
+          "program_data": {
+            "days": [
+              {
+                "day": "Docker UAT Day 1",
+                "exercises": [
+                  {
+                    "intensity": "",
+                    "name": "Back Squat",
+                    "notes": "Docker UAT validation row",
+                    "percent_1rm": "80",
+                    "reps": "3",
+                    "rest": "2 min",
+                    "rpe": "7",
+                    "sets": "5",
+                    "tempo": "controlled",
+                    "week": "1",
+                    "weight": "120"
+                  }
+                ],
+                "id": "d0"
+              }
+            ],
+            "intensity_mode": "percent_1rm",
+            "week_start_date": "2026-05-04"
+          },
+          "start_date": "2026-05-04",
+          "style_tags": [
+            "block:1wk",
+            "intensity_mode:percent_1rm",
+            "style:strength"
+          ],
+          "updated_at": "2026-05-04T22:53:29.081626Z"
+        }
+      },
+      "name": "temporary coach updates program",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "athlete_bodyweight_kg": null,
+          "athlete_competitive_weight_class": null,
+          "athlete_gender": null,
+          "athlete_id": 9,
+          "athlete_username": "uat_athlete_1777935208",
+          "coach_id": 8,
+          "coach_username": "uat_coach_1777935208",
+          "completion_data": null,
+          "created_at": "2026-05-04T22:53:29.069927Z",
+          "description": "Updated by Docker UAT harness.",
+          "end_date": null,
+          "id": 5,
+          "name": "Docker UAT Program 1777935208",
+          "normalized_name": "docker uat program 1777935208",
+          "program_data": {
+            "days": [
+              {
+                "day": "Docker UAT Day 1",
+                "exercises": [
+                  {
+                    "intensity": "",
+                    "name": "Back Squat",
+                    "notes": "Docker UAT validation row",
+                    "percent_1rm": "80",
+                    "reps": "3",
+                    "rest": "2 min",
+                    "rpe": "7",
+                    "sets": "5",
+                    "tempo": "controlled",
+                    "week": "1",
+                    "weight": "120"
+                  }
+                ],
+                "id": "d0"
+              }
+            ],
+            "intensity_mode": "percent_1rm",
+            "week_start_date": "2026-05-04"
+          },
+          "start_date": "2026-05-04",
+          "style_tags": [
+            "block:1wk",
+            "intensity_mode:percent_1rm",
+            "style:strength"
+          ],
+          "updated_at": "2026-05-04T22:53:29.093070Z"
+        }
+      },
+      "name": "temporary coach assigns program",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": [
+          {
+            "athlete_bodyweight_kg": null,
+            "athlete_competitive_weight_class": null,
+            "athlete_gender": null,
+            "athlete_id": 9,
+            "athlete_username": "uat_athlete_1777935208",
+            "coach_id": 8,
+            "coach_username": "uat_coach_1777935208",
+            "completion_data": null,
+            "created_at": "2026-05-04T22:53:29.069927Z",
+            "description": "Updated by Docker UAT harness.",
+            "end_date": null,
+            "id": 5,
+            "name": "Docker UAT Program 1777935208",
+            "normalized_name": "docker uat program 1777935208",
+            "program_data": {
+              "days": [
+                {
+                  "day": "Docker UAT Day 1",
+                  "exercises": [
+                    {
+                      "intensity": "",
+                      "name": "Back Squat",
+                      "notes": "Docker UAT validation row",
+                      "percent_1rm": "80",
+                      "reps": "3",
+                      "rest": "2 min",
+                      "rpe": "7",
+                      "sets": "5",
+                      "tempo": "controlled",
+                      "week": "1",
+                      "weight": "120"
+                    }
+                  ],
+                  "id": "d0"
+                }
+              ],
+              "intensity_mode": "percent_1rm",
+              "week_start_date": "2026-05-04"
+            },
+            "start_date": "2026-05-04",
+            "style_tags": [
+              "block:1wk",
+              "intensity_mode:percent_1rm",
+              "style:strength"
+            ],
+            "updated_at": "2026-05-04T22:53:29.093070Z"
+          }
+        ]
+      },
+      "name": "temporary athlete retrieves programs",
+      "passed": true
+    },
+    {
+      "detail": [
+        {
+          "athlete_bodyweight_kg": null,
+          "athlete_competitive_weight_class": null,
+          "athlete_gender": null,
+          "athlete_id": 9,
+          "athlete_username": "uat_athlete_1777935208",
+          "coach_id": 8,
+          "coach_username": "uat_coach_1777935208",
+          "completion_data": null,
+          "created_at": "2026-05-04T22:53:29.069927Z",
+          "description": "Updated by Docker UAT harness.",
+          "end_date": null,
+          "id": 5,
+          "name": "Docker UAT Program 1777935208",
+          "normalized_name": "docker uat program 1777935208",
+          "program_data": {
+            "days": [
+              {
+                "day": "Docker UAT Day 1",
+                "exercises": [
+                  {
+                    "intensity": "",
+                    "name": "Back Squat",
+                    "notes": "Docker UAT validation row",
+                    "percent_1rm": "80",
+                    "reps": "3",
+                    "rest": "2 min",
+                    "rpe": "7",
+                    "sets": "5",
+                    "tempo": "controlled",
+                    "week": "1",
+                    "weight": "120"
+                  }
+                ],
+                "id": "d0"
+              }
+            ],
+            "intensity_mode": "percent_1rm",
+            "week_start_date": "2026-05-04"
+          },
+          "start_date": "2026-05-04",
+          "style_tags": [
+            "block:1wk",
+            "intensity_mode:percent_1rm",
+            "style:strength"
+          ],
+          "updated_at": "2026-05-04T22:53:29.093070Z"
+        }
+      ],
+      "name": "temporary athlete sees UAT program",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "athlete_id": 9,
+          "completion_data": {
+            "entries": {
+              "d0": {
+                "0": {
+                  "athlete_notes": "Completed during Docker UAT.",
+                  "completed": true,
+                  "result": "5x3 @ 120kg"
+                }
+              }
+            }
+          },
+          "created_at": "2026-05-04T22:53:29.115064Z",
+          "id": 5,
+          "program_id": 5,
+          "updated_at": "2026-05-04T22:53:29.116955Z"
+        }
+      },
+      "name": "temporary athlete saves completion data",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 201,
+        "expected": 201,
+        "payload": {
+          "athlete_id": 9,
+          "created_at": "2026-05-04T22:53:29.124844Z",
+          "date": "2026-05-04",
+          "id": 3181,
+          "notes": "Docker UAT workout log.",
+          "updated_at": "2026-05-04T22:53:29.124852Z"
+        }
+      },
+      "name": "temporary athlete creates workout log",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": [
+          {
+            "athlete_id": 9,
+            "created_at": "2026-05-04T22:53:29.124844Z",
+            "date": "2026-05-04",
+            "id": 3181,
+            "notes": "Docker UAT workout log.",
+            "updated_at": "2026-05-04T22:53:29.124852Z"
+          }
+        ]
+      },
+      "name": "temporary athlete retrieves workout logs",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 201,
+        "expected": 201,
+        "payload": {
+          "athlete_id": 9,
+          "created_at": "2026-05-04T22:53:29.143491Z",
+          "date": "2026-05-04",
+          "id": 541,
+          "lift_type": "total",
+          "weight": "250.00"
+        }
+      },
+      "name": "temporary athlete creates PR",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": [
+          {
+            "athlete_id": 9,
+            "created_at": "2026-05-04T22:53:29.143491Z",
+            "date": "2026-05-04",
+            "id": 541,
+            "lift_type": "total",
+            "weight": "250.00"
+          }
+        ]
+      },
+      "name": "temporary athlete retrieves PRs",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 200,
+        "expected": 200,
+        "payload": {
+          "coefficient": 1.1873,
+          "sinclair_total": 356.18
+        }
+      },
+      "name": "Sinclair analytics endpoint responds",
+      "passed": true
+    },
+    {
+      "detail": {
+        "coefficient": 1.1873,
+        "sinclair_total": 356.18
+      },
+      "name": "Sinclair response has calculated total",
+      "passed": true
+    }
+  ],
+  "started_at": "2026-05-04T22:53:28Z",
+  "total": 24
+}

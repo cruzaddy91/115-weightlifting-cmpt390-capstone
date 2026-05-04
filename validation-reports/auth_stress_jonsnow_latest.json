@@ -1,0 +1,186 @@
+{
+  "backend_url": "http://localhost:8000",
+  "cycles": 25,
+  "elapsed_seconds": 4.228,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "passed": 25,
+  "results": [
+    {
+      "cycle": 1,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 2,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 3,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 4,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 5,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 6,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 7,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 8,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 9,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 10,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 11,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 12,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 13,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 14,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 15,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 16,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 17,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 18,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 19,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 20,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 21,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 22,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 23,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 24,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    },
+    {
+      "cycle": 25,
+      "detail": {
+        "step": "complete"
+      },
+      "passed": true
+    }
+  ],
+  "username": "jon_snow"
+}
