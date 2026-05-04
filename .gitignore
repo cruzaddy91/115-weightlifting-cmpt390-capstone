@@ -33,8 +33,7 @@ var/
 logs/
 media/
 staticfiles/
-validation-reports/*_logs_latest.txt
-validation-reports/compose_config_latest.txt
+validation-reports/
 
 # Local generated course artifacts
 *.docx

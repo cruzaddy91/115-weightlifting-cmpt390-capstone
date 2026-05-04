@@ -2,7 +2,7 @@
 
 115 Weightlifting is a full-stack capstone project for Olympic weightlifting coaches and athletes. It supports role-aware dashboards for head coaches, line coaches, and athletes; structured training program creation and assignment; athlete workout completion; personal record tracking; charts; roster analytics; and Sinclair scoring.
 
-This repository is the professor-facing, Docker-ready version of the project. It is intended to be cloned and launched locally with Docker Compose.
+This repository is the professor-facing, Docker-ready version of the project. It is intended to be cloned and launched locally with Docker Compose, without requiring a local Python, Node, or PostgreSQL setup.
 
 ## Quick Launch
 
@@ -15,8 +15,8 @@ docker compose up --build
 
 Then open:
 
-- Frontend: http://localhost:4173
-- Backend API: http://localhost:8000
+- Frontend: <http://localhost:4173>
+- Backend API: <http://localhost:8000>
 
 The first backend startup runs migrations and, by default, seeds demo data because `SEED_DEMO=true` in `.env.example`.
 
@@ -32,9 +32,9 @@ Suggested walkthrough accounts:
 
 | Role | Username | URL |
 | --- | --- | --- |
-| Head coach | `Headcoachone` | http://localhost:4173/head |
-| Line coach | `Coachone` | http://localhost:4173/coach |
-| Athlete | `jon_snow` | http://localhost:4173/athlete |
+| Head coach | `Headcoachone` | <http://localhost:4173/head> |
+| Line coach | `Coachone` | <http://localhost:4173/coach> |
+| Athlete | `jon_snow` | <http://localhost:4173/athlete> |
 
 The `jon_snow` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
 
@@ -67,6 +67,26 @@ docker compose down -v
 docker compose logs -f backend
 ```
 
+## Smoke / Stress Validation
+
+After the stack is running, or from a fresh clone, run the Docker-first validation harness:
+
+```bash
+scripts/validate_docker_stack.sh
+```
+
+The harness:
+
+- creates `.env` from `.env.example` if needed;
+- validates `docker compose config`;
+- starts the Postgres, backend, and frontend containers;
+- waits for backend and frontend readiness;
+- verifies the seeded demo accounts;
+- runs an API UAT flow for program creation, assignment, completion, workout logs, PRs, and Sinclair analytics;
+- runs auth stress cycles for `Coachone` and `jon_snow`.
+
+Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.
+
 ## Environment
 
 Copy `.env.example` to `.env` before launch. The defaults are intended for local Docker review only.
@@ -88,24 +108,12 @@ Important settings:
 ├── .env.example
 ├── LICENSE
 ├── README.md
+├── scripts/            # Docker smoke/stress validation harness
 └── 115-weightlifting/
     ├── src/backend/      # Django REST API, Dockerfile, Docker entrypoint
     ├── src/frontend/     # React/Vite app, Dockerfile
-    ├── tools/sim/        # Simulation and demo data tools
-    ├── scripts/          # Local development and reporting scripts
-    └── README.md         # Application-level details
+    └── README.md         # Source directory note
 ```
-
-## Local Development Without Docker
-
-The original app-level workflow is still available under `115-weightlifting/`:
-
-```bash
-cd 115-weightlifting
-./bin/zw help
-```
-
-For grading/demo purposes, Docker Compose is the recommended path because it avoids requiring local Python, Node, or PostgreSQL setup.
 
 ## Notes On Production
 
