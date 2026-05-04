@@ -1,0 +1,384 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* ============================================================================
+   Design tokens — "Tron, grown up".
+   One neon system: cyan primary, amber reserved for coach-action accents only.
+   Dark near-black base. High-contrast text. Data-forward typography.
+   ============================================================================ */
+:root {
+  color-scheme: dark;
+
+  /* Canonical neons */
+  --neon-cyan:  #5fe4ff;   /* primary accent */
+  --neon-blue:  #2aa9ff;
+  --neon-ice:   #a5ecff;
+  --neon-amber: #ffb23f;   /* coach-action only */
+
+  /* Surfaces */
+  --bg-void:    #020309;
+  --bg-deep:    #060a14;
+  --bg-panel:   #0a1220;
+  --bg-panel-2: #0e1a2e;
+  --bg-input:   #060c18;
+
+  /* Text */
+  --text-primary:   #f4f7fb;
+  --text-secondary: #c9d6e3;
+  --text-muted:     #8a9db0;
+  --text-dim:       #5d7388;
+
+  /* Semantic */
+  --danger:  #ff5a6e;
+  --success: #36f0c5;
+  --warning: var(--neon-amber);
+  --danger-soft:  rgba(255, 90, 110, 0.12);
+  --success-soft: rgba(54, 240, 197, 0.12);
+  --warning-soft: rgba(255, 178, 63, 0.12);
+
+  /* Accent aliases used across App.css */
+  --accent-cyan:   var(--neon-cyan);
+  --accent-blue:   var(--neon-blue);
+  --accent-ice:    var(--neon-ice);
+  --accent-amber:  var(--neon-amber);
+  --accent-orange: var(--neon-amber); /* deprecated; points to amber */
+  --accent-violet: var(--neon-cyan);  /* retired: fall back to cyan */
+
+  --accent-soft:        rgba(95, 228, 255, 0.12);
+  --accent-soft-blue:   rgba(42, 169, 255, 0.12);
+  --accent-soft-amber:  rgba(255, 178, 63, 0.12);
+  --accent-soft-violet: rgba(95, 228, 255, 0.08); /* retired alias */
+  --accent-soft-orange: rgba(255, 178, 63, 0.12);
+
+  /* Structural lines — thin 1px rules instead of gradient borders */
+  --line:        rgba(95, 228, 255, 0.14);
+  --line-strong: rgba(95, 228, 255, 0.42);
+  --line-hot:    rgba(255, 178, 63, 0.38);
+
+  /* Radii — data surfaces are sharp (blueprint feel), interactive rounded */
+  --radius-data: 4px;
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-pill: 999px;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Shadows — subtle, no more multi-layer neon pileup */
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.03), 0 1px 12px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 28px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 44px rgba(0, 0, 0, 0.6);
+
+  --glow-ring: 0 0 0 1px rgba(95, 228, 255, 0.26);
+  --glow-ring-hot: 0 0 0 1px rgba(255, 178, 63, 0.36);
+  --glow-chip: 0 0 0 1px rgba(95, 228, 255, 0.14);
+
+  /* Legacy alias names still used by App.css until fully migrated */
+  --glow-sm: var(--shadow-sm), var(--glow-ring);
+  --glow-md: var(--shadow-md), var(--glow-ring);
+  --glow-lg: var(--shadow-lg), var(--glow-ring);
+  --glow-hot: var(--shadow-md), var(--glow-ring-hot);
+  --inner-glow: inset 0 0 0 1px rgba(95, 228, 255, 0.06);
+  --inner-hot:  inset 0 0 0 1px rgba(255, 178, 63, 0.08);
+
+  /* Scanlines retained but now only used on the outer body background, not
+     every content surface. Kept for optional reintroduction. */
+  --scanlines: repeating-linear-gradient(
+    180deg,
+    rgba(165, 236, 255, 0.022) 0,
+    rgba(165, 236, 255, 0.022) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  --noise: none;
+
+  --transition-fast: 120ms ease-out;
+  --transition-main: 180ms ease-out;
+  --transition-slow: 260ms ease-out;
+
+  /* Font stacks */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Exo 2', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* Primary-button gradient. Token-ized so light mode can swap without
+     touching every button rule. */
+  --btn-bg:       linear-gradient(180deg, #102a48, #081426);
+  --btn-bg-hover: linear-gradient(180deg, #143455, #0a1a2e);
+
+  /* Focus ring + Chart.js (read in JS via chartTheme.js) */
+  --focus-ring: 0 0 0 3px rgba(95, 228, 255, 0.14);
+  --chart-axis-tick: #b3d4ee;
+  --chart-grid: rgba(95, 228, 255, 0.14);
+  --chart-border: rgba(95, 228, 255, 0.34);
+  --chart-sn-border: #5fe4ff;
+  --chart-sn-fill: rgba(95, 228, 255, 0.14);
+  --chart-sn-point: #a5ecff;
+  --chart-cj-border: #36f0c5;
+  --chart-cj-fill: rgba(54, 240, 197, 0.14);
+  --chart-cj-point: #7ff7dd;
+  --chart-tot-border: #ffb23f;
+  --chart-tot-fill: rgba(255, 178, 63, 0.14);
+  --chart-tot-point: #ffd489;
+  --chart-monthly-total-line: rgba(165, 236, 255, 0.55);
+  --chart-monthly-total-fill: rgba(95, 228, 255, 0.08);
+  --chart-peak-marker: #ffb23f;
+  --chart-forecast-line: rgba(54, 240, 197, 0.85);
+  --chart-forecast-point: #36f0c5;
+  --chart-rolling-border: #36f0c5;
+  --chart-rolling-fill: rgba(54, 240, 197, 0.12);
+  --chart-rolling-point: #7ff7dd;
+  --chart-tooltip-bg: rgba(4, 10, 20, 0.96);
+  --chart-tooltip-title: #f4f7fb;
+  --chart-tooltip-body: #c9d6e3;
+  --chart-tooltip-border: rgba(95, 228, 255, 0.28);
+  --chart-legend: #f4f7fb;
+}
+
+/* ==========================================================================
+   Light theme override. Opt-in only: user flips via the nav toggle
+   (utils/theme.js writes data-theme="light" onto <html>). Dark stays the
+   default — prefers-color-scheme is respected on first visit in theme.js.
+   Tokens are re-colored for readability on a near-white base while keeping
+   the cyan/amber brand identity. Everything else inherits unchanged.
+   ========================================================================== */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Neons re-tuned for contrast on white. Cyan desaturates to a deep teal;
+     amber darkens. */
+  --neon-cyan:  #0086b3;
+  --neon-blue:  #0a6ac2;
+  --neon-ice:   #0f90b8;
+  --neon-amber: #b06200;
+
+  --bg-void:    #f4f7fb;
+  --bg-deep:    #eaf0f7;
+  --bg-panel:   #ffffff;
+  --bg-panel-2: #f1f5fa;
+  --bg-input:   #f8fafc;
+
+  --text-primary:   #0b1324;
+  --text-secondary: #394d65;
+  --text-muted:     #4d647d;
+  --text-dim:       #667f99;
+
+  --danger:  #c03040;
+  --success: #0e9e7e;
+  --warning: var(--neon-amber);
+  --danger-soft:  rgba(192, 48, 64, 0.10);
+  --success-soft: rgba(14, 158, 126, 0.10);
+  --warning-soft: rgba(176, 98, 0, 0.10);
+
+  --accent-soft:       rgba(0, 134, 179, 0.08);
+  --accent-soft-blue:  rgba(10, 106, 194, 0.08);
+  --accent-soft-amber: rgba(176, 98, 0, 0.10);
+
+  --line:        rgba(15, 60, 90, 0.14);
+  --line-strong: rgba(15, 60, 90, 0.42);
+  --line-hot:    rgba(176, 98, 0, 0.40);
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.14);
+
+  --glow-ring: 0 0 0 1px rgba(0, 134, 179, 0.28);
+  --glow-ring-hot: 0 0 0 1px rgba(176, 98, 0, 0.34);
+  --glow-chip: 0 0 0 1px rgba(0, 134, 179, 0.14);
+
+  --inner-glow: inset 0 0 0 1px rgba(0, 134, 179, 0.06);
+  --inner-hot:  inset 0 0 0 1px rgba(176, 98, 0, 0.08);
+
+  --scanlines: none;
+
+  --btn-bg:       linear-gradient(180deg, #0086b3, #00688c);
+  --btn-bg-hover: linear-gradient(180deg, #00a5d4, #007fa8);
+
+  --focus-ring: 0 0 0 3px rgba(0, 134, 179, 0.22);
+  --chart-axis-tick: #4a667a;
+  --chart-grid: rgba(0, 102, 140, 0.12);
+  --chart-border: rgba(0, 102, 140, 0.28);
+  --chart-sn-border: #0086b3;
+  --chart-sn-fill: rgba(0, 134, 179, 0.12);
+  --chart-sn-point: #0f90b8;
+  --chart-cj-border: #0e9e7e;
+  --chart-cj-fill: rgba(14, 158, 126, 0.12);
+  --chart-cj-point: #0a7d64;
+  --chart-tot-border: #b06200;
+  --chart-tot-fill: rgba(176, 98, 0, 0.12);
+  --chart-tot-point: #c47a12;
+  --chart-monthly-total-line: #0a6ac2;
+  --chart-monthly-total-fill: rgba(0, 134, 179, 0.08);
+  --chart-peak-marker: #b06200;
+  --chart-forecast-line: #0e9e7e;
+  --chart-forecast-point: #0a7d64;
+  --chart-rolling-border: #0e9e7e;
+  --chart-rolling-fill: rgba(14, 158, 126, 0.1);
+  --chart-rolling-point: #0a7d64;
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
+  --chart-tooltip-title: #0b1324;
+  --chart-tooltip-body: #394d65;
+  --chart-tooltip-border: rgba(0, 102, 140, 0.22);
+  --chart-legend: #0b1324;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(42, 169, 255, 0.10), transparent 28%),
+    radial-gradient(circle at 88% 6%, rgba(95, 228, 255, 0.08), transparent 26%),
+    linear-gradient(180deg, #020309 0%, #040714 50%, #020309 100%);
+  background-attachment: fixed;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(0, 134, 179, 0.05), transparent 28%),
+    radial-gradient(circle at 88% 6%, rgba(10, 106, 194, 0.04), transparent 26%),
+    linear-gradient(180deg, #f4f7fb 0%, #eaf0f7 50%, #f4f7fb 100%);
+}
+
+/* Subtle grid pattern on the backdrop — one of the few "Tron" cues that stays.
+   Fades out toward the edges so content area reads cleanly. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background-image:
+    linear-gradient(rgba(95, 228, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 228, 255, 0.02) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
+  mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
+  opacity: 0.32;
+}
+
+:root[data-theme="light"] body::before {
+  /* Quieter grid on light — keep the blueprint cue but at ~1/3 visibility. */
+  background-image:
+    linear-gradient(rgba(0, 86, 120, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 86, 120, 0.04) 1px, transparent 1px);
+  opacity: 0.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.nav-logo {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+p,
+label,
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+}
+
+/* Hide the example-value placeholder the instant the field is focused, so the
+   user never has to squint around their own caret. The placeholder returns
+   only if the field is emptied and blurred. */
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: transparent;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-main),
+    box-shadow var(--transition-main),
+    transform var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(95, 228, 255, 0.18);
+}
+
+::selection {
+  background: rgba(95, 228, 255, 0.28);
+  color: var(--text-primary);
+}
+
+/* Data-display utility: monospace, tabular, tighter tracking. Use for weights,
+   sets, reps, percentages -- anywhere numbers matter more than decoration. */
+.data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,42 @@
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+coverage/
+
+# Runtime state
+*.log
+*.pid
+*.sqlite3
+*.sqlite
+*.db
+var/
+logs/
+media/
+staticfiles/
+
+# Local generated course artifacts
+*.docx
+*.pdf
+*.pptx
+*.xlsx
+~$*

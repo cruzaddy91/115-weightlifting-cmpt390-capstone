@@ -1,0 +1,11 @@
+setuptools<81
+requests>=2.31.0
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+djangorestframework-simplejwt==5.3.0
+gunicorn==23.0.0
+joblib==1.5.3
+scikit-learn==1.8.0

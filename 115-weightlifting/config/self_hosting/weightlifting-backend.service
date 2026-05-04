@@ -1,0 +1,15 @@
+[Unit]
+Description=Weightlifting Django backend
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/weightlifting/app/115-weightlifting/src/backend
+EnvironmentFile=/srv/weightlifting/env/backend.env
+ExecStart=/srv/weightlifting/app/115-weightlifting/src/backend/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 --chdir /srv/weightlifting/app/115-weightlifting/src/backend
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

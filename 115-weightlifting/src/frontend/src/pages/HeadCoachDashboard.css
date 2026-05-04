@@ -1,0 +1,268 @@
+.head-dashboard {
+  padding-top: 1.25rem;
+  padding-bottom: 2.25rem;
+}
+
+.head-dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.head-summary-grid {
+  margin-bottom: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.head-dashboard-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.65rem;
+}
+
+.head-dashboard-lede {
+  margin: 0;
+  max-width: 36rem;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.head-dashboard-link-coach {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: inherit;
+}
+
+.head-dashboard-link-coach:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-panel-2);
+}
+
+.head-dashboard-status {
+  opacity: 0.8;
+}
+
+.head-model-strip {
+  margin: 1rem 0;
+}
+
+.head-model-strip h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.head-model-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.head-model-card {
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.head-model-card .label {
+  font-size: 0.8rem;
+  opacity: 0.78;
+}
+
+.head-top-recommendation {
+  margin: 0.4rem 0 0;
+  font-size: 0.94rem;
+}
+
+.head-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  margin-bottom: 1rem;
+}
+
+.head-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.head-table th,
+.head-table td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.head-table th {
+  font-weight: 600;
+  opacity: 0.85;
+  background: var(--bg-panel-2);
+}
+
+.head-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.head-assign-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.head-analytics-section {
+  margin-top: 1rem;
+}
+
+.head-assign-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+}
+
+.head-assign-lede {
+  margin: 0 0 1rem;
+  max-width: 40rem;
+  line-height: 1.45;
+  opacity: 0.88;
+  font-size: 0.95rem;
+}
+
+.head-invite-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.head-invite-form input {
+  min-width: 12rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.15));
+  background: var(--input-bg, rgba(0, 0, 0, 0.2));
+  color: inherit;
+}
+
+.head-btn-primary,
+.head-btn-danger {
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.head-btn-primary {
+  background: linear-gradient(180deg, #0f3b1f, #082413);
+  border-color: rgba(111, 227, 147, 0.5);
+  color: #dcffe8;
+}
+
+.head-btn-primary:disabled,
+.head-btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.head-btn-danger {
+  background: transparent;
+  border-color: rgba(255, 120, 120, 0.55);
+  color: inherit;
+}
+
+.head-assign-card {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+}
+
+.head-assign-card h3 {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+}
+
+.head-assign-empty {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 0.92rem;
+}
+
+.head-assign-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.head-assign-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.head-assign-list li:last-child {
+  border-bottom: none;
+}
+
+.head-athlete-table {
+  margin-top: 0.35rem;
+}
+
+.head-analytics-recs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.head-analytics-recs li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background: var(--panel-bg, rgba(0, 0, 0, 0.08));
+}
+
+.head-analytics-rec-meta {
+  opacity: 0.82;
+  font-size: 0.88rem;
+}
+
+.head-coach-select {
+  min-width: 11rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg-input);
+  color: inherit;
+}

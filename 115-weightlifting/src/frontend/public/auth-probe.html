@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>115 Weightlifting — Auth Flow Probe</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      background: #020309;
+      color: #f4f7fb;
+      margin: 0;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+    header { margin-bottom: 1.5rem; }
+    h1 {
+      font-family: 'Exo 2', sans-serif;
+      color: #5fe4ff;
+      letter-spacing: 0.02em;
+      font-size: 1.5rem;
+      margin: 0 0 0.35rem;
+    }
+    p.lede { color: #c9d6e3; margin: 0 0 1rem; font-size: 0.9rem; font-family: -apple-system, sans-serif; }
+    .controls { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    button, select, input {
+      font: inherit;
+      padding: 0.55rem 0.9rem;
+      border: 1px solid rgba(95, 228, 255, 0.26);
+      border-radius: 4px;
+      background: #0a1220;
+      color: #f4f7fb;
+      cursor: pointer;
+    }
+    button:hover { border-color: #5fe4ff; }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .primary { background: linear-gradient(180deg, #102a48, #081426); border-color: #5fe4ff; }
+    .danger { border-color: rgba(255, 90, 110, 0.42); color: #ff8ea6; }
+    input { width: 220px; }
+    .row { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    label { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a9db0; }
+    .step {
+      border: 1px solid rgba(95, 228, 255, 0.14);
+      border-radius: 4px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      background: #060a14;
+    }
+    .step.ok   { border-left: 3px solid #36f0c5; }
+    .step.fail { border-left: 3px solid #ff5a6e; }
+    .step.info { border-left: 3px solid #5fe4ff; }
+    .step h3 {
+      margin: 0 0 0.25rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      color: #f4f7fb;
+    }
+    .step .meta {
+      color: #8a9db0;
+      font-size: 0.78rem;
+      margin-bottom: 0.35rem;
+    }
+    pre {
+      background: #020309;
+      border: 1px solid rgba(95, 228, 255, 0.14);
+      padding: 0.75rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.78rem;
+      max-height: 320px;
+      overflow-y: auto;
+      margin: 0;
+    }
+    .summary {
+      padding: 1rem;
+      border-radius: 4px;
+      background: #0a1220;
+      border: 1px solid rgba(95, 228, 255, 0.26);
+      margin-bottom: 1rem;
+    }
+    .summary strong { color: #5fe4ff; }
+    .tag {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-right: 0.3rem;
+    }
+    .tag.ok   { background: rgba(54, 240, 197, 0.16); color: #36f0c5; }
+    .tag.fail { background: rgba(255, 90, 110, 0.16); color: #ff5a6e; }
+    .tag.info { background: rgba(95, 228, 255, 0.16); color: #5fe4ff; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Auth Flow Probe</h1>
+    <p class="lede">Instruments the full login → logout → login cycle inside THIS browser. Captures every response, cookie, localStorage snapshot, and timing. Runs N times and reports per-cycle status.</p>
+  </header>
+
+  <div class="controls">
+    <div class="row">
+      <label>User A</label>
+      <input id="user-a" value="Coachone" />
+      <label>User B (optional)</label>
+      <input id="user-b" value="jon_snow" />
+      <label>Password</label>
+      <input id="password" value="Passw0rd!123" />
+      <label>Cycles</label>
+      <input id="cycles" type="number" value="3" min="1" max="20" />
+    </div>
+    <div class="row">
+      <button class="primary" id="run">▶ Run probe</button>
+      <button id="clear-state" class="danger">Clear localStorage + cookies</button>
+      <button id="download-json" disabled>⬇ Download JSON report</button>
+    </div>
+  </div>
+
+  <div class="summary" id="summary">Press <strong>Run probe</strong> to begin.</div>
+
+  <div id="steps"></div>
+
+  <script>
+    const REPORT = {
+      startedAt: null,
+      finishedAt: null,
+      userAgent: navigator.userAgent,
+      cookieEnabled: navigator.cookieEnabled,
+      vendor: navigator.vendor,
+      origin: location.origin,
+      cycles: [],
+      summary: null,
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const stepsEl = $("steps");
+
+    const renderStep = ({ status, title, meta, body }) => {
+      const step = document.createElement("div");
+      step.className = `step ${status}`;
+      const metaHtml = meta ? `<div class="meta">${meta}</div>` : "";
+      const bodyHtml = body ? `<pre>${escape(JSON.stringify(body, null, 2))}</pre>` : "";
+      step.innerHTML = `<h3><span class="tag ${status}">${status}</span>${title}</h3>${metaHtml}${bodyHtml}`;
+      stepsEl.appendChild(step);
+      step.scrollIntoView({ block: "nearest" });
+    };
+
+    const escape = (s) =>
+      String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+    const snapshot = () => ({
+      localStorage: Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)])),
+      cookies: document.cookie,
+    });
+
+    const fetchJson = async (path, opts = {}) => {
+      const t0 = performance.now();
+      let resp, text, data = null, error = null;
+      try {
+        resp = await fetch(path, { credentials: "include", ...opts });
+        text = await resp.text();
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      } catch (e) {
+        error = e.message;
+      }
+      const elapsedMs = Math.round(performance.now() - t0);
+      return {
+        ok: resp?.ok ?? false,
+        status: resp?.status ?? 0,
+        elapsedMs,
+        setCookie: resp?.headers?.get("set-cookie") ?? null,
+        data,
+        error,
+      };
+    };
+
+    const clearClientState = () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie.split(";").forEach((c) => {
+        const eq = c.indexOf("=");
+        const name = (eq > -1 ? c.substring(0, eq) : c).trim();
+        if (!name) return;
+        ["/", "/api/auth/", "/api/"].forEach((path) => {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path}`;
+        });
+      });
+    };
+
+    const runOneCycle = async (cycleNum, loginUser, password) => {
+      const cycle = {
+        cycleNum,
+        loginUser,
+        steps: [],
+        pass: false,
+      };
+      const recordStep = (step) => {
+        cycle.steps.push(step);
+        renderStep({
+          status: step.ok ? "ok" : step.info ? "info" : "fail",
+          title: `Cycle ${cycleNum} · ${step.title}`,
+          meta: `HTTP ${step.status ?? "-"} · ${step.elapsedMs ?? 0}ms`,
+          body: step.detail,
+        });
+      };
+
+      // 1. Pre-login state
+      recordStep({
+        title: "Pre-login snapshot",
+        info: true,
+        detail: snapshot(),
+      });
+
+      // 2. POST /api/auth/token/
+      const loginResp = await fetchJson("/api/auth/token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loginUser, password }),
+      });
+      recordStep({
+        title: `POST /api/auth/token/ as ${loginUser}`,
+        ok: loginResp.ok,
+        status: loginResp.status,
+        elapsedMs: loginResp.elapsedMs,
+        detail: {
+          response: loginResp.data,
+          setCookieHeader: loginResp.setCookie,
+          error: loginResp.error,
+        },
+      });
+      if (!loginResp.ok) { cycle.pass = false; return cycle; }
+
+      const access = loginResp.data.access;
+      localStorage.setItem("weightlifting_auth_token", access);
+
+      // 3. GET /api/auth/me/
+      const meResp = await fetchJson("/api/auth/me/", {
+        headers: { Authorization: "Bearer " + access },
+      });
+      recordStep({
+        title: "GET /api/auth/me/ (post-login)",
+        ok: meResp.ok,
+        status: meResp.status,
+        elapsedMs: meResp.elapsedMs,
+        detail: { response: meResp.data, error: meResp.error },
+      });
+      if (!meResp.ok) { cycle.pass = false; return cycle; }
+
+      localStorage.setItem("weightlifting_current_user", JSON.stringify(meResp.data));
+
+      // 4. POST /api/auth/logout/
+      const logoutResp = await fetchJson("/api/auth/logout/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + access,
+        },
+        body: JSON.stringify({}),
+      });
+      recordStep({
+        title: "POST /api/auth/logout/",
+        ok: logoutResp.ok,
+        status: logoutResp.status,
+        elapsedMs: logoutResp.elapsedMs,
+        detail: {
+          response: logoutResp.data,
+          setCookieHeader: logoutResp.setCookie,
+          error: logoutResp.error,
+        },
+      });
+
+      // Emulate what the app's logout() does
+      localStorage.removeItem("weightlifting_auth_token");
+      localStorage.removeItem("weightlifting_refresh_token");
+      localStorage.removeItem("weightlifting_current_user");
+
+      // 5. Post-logout snapshot
+      recordStep({
+        title: "Post-logout snapshot",
+        info: true,
+        detail: snapshot(),
+      });
+
+      cycle.pass = loginResp.ok && meResp.ok && logoutResp.ok;
+      return cycle;
+    };
+
+    const runProbe = async () => {
+      stepsEl.innerHTML = "";
+      REPORT.cycles = [];
+      REPORT.startedAt = new Date().toISOString();
+
+      const userA = $("user-a").value.trim();
+      const userB = $("user-b").value.trim();
+      const password = $("password").value;
+      const cycles = Math.max(1, Math.min(20, Number($("cycles").value) || 1));
+
+      // Cycle structure: login/logout user A ... last cycle uses user B if provided
+      for (let i = 1; i <= cycles; i++) {
+        const useUser = i === cycles && userB ? userB : userA;
+        const cycle = await runOneCycle(i, useUser, password);
+        REPORT.cycles.push(cycle);
+      }
+
+      REPORT.finishedAt = new Date().toISOString();
+      const passed = REPORT.cycles.filter((c) => c.pass).length;
+      const failed = REPORT.cycles.length - passed;
+      REPORT.summary = { passed, failed, total: REPORT.cycles.length };
+
+      $("summary").innerHTML =
+        `<strong>${passed}/${REPORT.cycles.length} cycles passed</strong>` +
+        (failed > 0 ? ` — ${failed} failed` : "") +
+        `<br/><span style="color:#8a9db0">Started ${REPORT.startedAt}, finished ${REPORT.finishedAt}. Open the "Download JSON report" button to share.</span>`;
+
+      $("download-json").disabled = false;
+    };
+
+    $("run").addEventListener("click", () => {
+      $("run").disabled = true;
+      runProbe().finally(() => ($("run").disabled = false));
+    });
+
+    $("clear-state").addEventListener("click", () => {
+      clearClientState();
+      renderStep({
+        status: "info",
+        title: "Client state cleared",
+        meta: "localStorage + cookies",
+        body: snapshot(),
+      });
+    });
+
+    $("download-json").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(REPORT, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `auth-probe-${Date.now()}.json`;
+      a.click();
+    });
+  </script>
+</body>
+</html>

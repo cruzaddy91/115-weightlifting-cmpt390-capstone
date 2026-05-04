@@ -1,0 +1,154 @@
+#!/bin/bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+Weightlifting project CLI
+
+Usage:
+  ./bin/zw <command>
+
+Before pushing changes, run: ./bin/zw smoke-all && ./bin/zw test
+(see config/CLI_CHEATSHEET.md "Ship checklist".)
+
+Commands:
+  help             Show this help
+  setup            Install backend/frontend dependencies and ensure env files exist
+  doctor           Run environment and app health diagnostics
+  clean            Preview or remove generated local artifacts
+  status           Show repo, env, and local port status
+  migrate          Apply Django migrations
+  seed-demo        Seed demo coach/athlete users
+  reset-demo       Reset demo users and demo-owned data
+  prune-demo       Remove stale coach/athlete users; keep Coachone + default GoT roster
+  make-demo        Build a richer demo scenario with seeded app data
+  seed-long-history  Bulk ~3y PR + workout demo rows for GoT athletes (ORM)
+  seed-coachtwo-lotr Coachtwo + 5 LotR athletes + 3y PR/workout history (optional --with-programs)
+  backfill-demo-completion  HTTP: full populate_history for Coachone+GoT and Coachtwo+LotR (adds many programs)
+  backfill-coach-completion  HTTP: completion only for a coach’s existing programs (fix 0/y; pass coach name, default Coachtwo)
+  build            Build the frontend bundle
+  dev              Run local development servers (Vite dev + Django runserver)
+  host-local       Manage the local self-host stack
+  logs             Tail local host logs
+  backup           Back up the app database and fixture data
+  export-data      Export fixture data to JSON
+  import-data      Import fixture data from JSON
+  restore          Restore the database from a backup
+  report           Generate Markdown and HTML operations reports
+  smoke            Run the end-to-end backend API smoke
+  smoke-settings   Smoke: settings.py refuses insecure SECRET_KEY in prod
+  smoke-frontend   Smoke: frontend vitest + production build
+  smoke-all        Run every smoke (backend + settings + frontend)
+  test             Run backend checks/tests and frontend production build
+  uat              Run localhost user acceptance tests against the live stack
+  release          Run the controlled pre-deploy release flow
+  prepare-public   Prepare the app for a public self-host deployment
+EOF
+}
+
+command="${1:-help}"
+shift || true
+
+case "$command" in
+  help|-h|--help)
+    usage
+    ;;
+  setup)
+    exec "$ROOT_DIR/scripts/setup.sh" "$@"
+    ;;
+  doctor)
+    exec "$ROOT_DIR/scripts/doctor.sh" "$@"
+    ;;
+  clean)
+    exec "$ROOT_DIR/scripts/clean.sh" "$@"
+    ;;
+  status)
+    exec "$ROOT_DIR/scripts/status.sh" "$@"
+    ;;
+  migrate)
+    exec "$ROOT_DIR/scripts/migrate.sh" "$@"
+    ;;
+  seed-demo)
+    exec "$ROOT_DIR/scripts/seed_demo_users.sh" "$@"
+    ;;
+  reset-demo)
+    exec "$ROOT_DIR/scripts/reset_demo.sh" "$@"
+    ;;
+  prune-demo)
+    exec "$ROOT_DIR/scripts/prune_demo_database.sh" "$@"
+    ;;
+  make-demo)
+    exec "$ROOT_DIR/scripts/make_demo.sh" "$@"
+    ;;
+  seed-long-history)
+    exec "$ROOT_DIR/scripts/seed_longterm_got_history.sh" "$@"
+    ;;
+  seed-coachtwo-lotr)
+    exec "$ROOT_DIR/scripts/seed_coachtwo_lotr_demo.sh" "$@"
+    ;;
+  backfill-demo-completion)
+    exec "$ROOT_DIR/scripts/backfill_demo_completion.sh" "$@"
+    ;;
+  backfill-coach-completion)
+    exec "$ROOT_DIR/scripts/backfill_coach_completion_only.sh" "$@"
+    ;;
+  build)
+    exec "$ROOT_DIR/scripts/build_all.sh" "$@"
+    ;;
+  dev)
+    exec "$ROOT_DIR/scripts/run_dev.sh" "$@"
+    ;;
+  host-local)
+    exec "$ROOT_DIR/scripts/run_local_host.sh" "$@"
+    ;;
+  logs)
+    exec "$ROOT_DIR/scripts/run_local_host.sh" logs "$@"
+    ;;
+  backup)
+    exec "$ROOT_DIR/scripts/backup_data.sh" "$@"
+    ;;
+  export-data)
+    exec "$ROOT_DIR/scripts/export_data.sh" "$@"
+    ;;
+  import-data)
+    exec "$ROOT_DIR/scripts/import_data.sh" "$@"
+    ;;
+  restore)
+    exec "$ROOT_DIR/scripts/restore_data.sh" "$@"
+    ;;
+  report)
+    exec "$ROOT_DIR/scripts/report.sh" "$@"
+    ;;
+  smoke)
+    exec "$ROOT_DIR/scripts/smoke_test.sh" "$@"
+    ;;
+  smoke-settings)
+    exec "$ROOT_DIR/scripts/smoke_settings.sh" "$@"
+    ;;
+  smoke-frontend)
+    exec "$ROOT_DIR/scripts/smoke_frontend.sh" "$@"
+    ;;
+  smoke-all)
+    exec "$ROOT_DIR/scripts/smoke_all.sh" "$@"
+    ;;
+  test)
+    exec "$ROOT_DIR/scripts/test_all.sh" "$@"
+    ;;
+  uat)
+    exec "$ROOT_DIR/scripts/uat.sh" "$@"
+    ;;
+  release)
+    exec "$ROOT_DIR/scripts/release.sh" "$@"
+    ;;
+  prepare-public)
+    exec "$ROOT_DIR/scripts/prepare_public_host.sh" "$@"
+    ;;
+  *)
+    echo "Unknown command: $command" >&2
+    echo >&2
+    usage >&2
+    exit 1
+    ;;
+esac

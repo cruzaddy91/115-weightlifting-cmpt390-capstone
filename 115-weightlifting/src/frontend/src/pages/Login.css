@@ -1,0 +1,215 @@
+/* "Tron, grown up" login. No scanlines, no masked gradient borders, no
+   neon-pulse. Flat panels with thin cyan rules, typography-led hierarchy. */
+
+.login-container {
+  min-height: calc(100vh - 86px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem 1rem;
+}
+
+.login-grid {
+  width: min(1120px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.8fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.login-intro,
+.login-card {
+  min-height: 100%;
+}
+
+.login-intro {
+  position: relative;
+  padding: clamp(1.6rem, 3vw, 2.4rem);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* One subtle corner accent, not two overlapping radials. */
+.login-intro::after {
+  content: '';
+  position: absolute;
+  inset: auto -10% 6% auto;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(95, 228, 255, 0.14), transparent 62%);
+  pointer-events: none;
+}
+
+.login-intro h1 {
+  margin-top: 1rem;
+  font-size: clamp(2.2rem, 1.8rem + 1.8vw, 3.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  /* Sentence case -- no uppercase, no text-shadow. */
+}
+
+.login-intro-copy {
+  max-width: 34ch;
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.login-intro-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.login-intro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+}
+
+.login-intro-item .label {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.login-intro-item .value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.login-card {
+  padding: 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card-frame {
+  position: relative;
+  z-index: 1;
+}
+
+.login-card h2 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.login-subtitle {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 1.4rem;
+}
+
+.login-card .form-group {
+  margin-bottom: 0.85rem;
+}
+
+.login-card label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.form-hint {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.login-register {
+  margin-top: 1.1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--neon-cyan);
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.link-btn:hover {
+  color: var(--neon-ice);
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .login-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-intro { order: 2; }
+  .login-card  { order: 1; }
+}
+
+@media (max-width: 640px) {
+  .login-container {
+    padding: 1rem 0.5rem;
+    min-height: calc(100vh - 60px);
+  }
+
+  .login-grid {
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .login-intro,
+  .login-card {
+    padding: 1rem;
+    min-height: 0;
+  }
+
+  .login-card-frame {
+    padding: 1rem;
+  }
+
+  .login-card input,
+  .login-card select,
+  .login-card textarea {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+  }
+
+  .login-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  h1 { font-size: 1.6rem; line-height: 1.2; }
+  h2 { font-size: 1.25rem; }
+
+  .login-intro-list { gap: 0.5rem; }
+}
