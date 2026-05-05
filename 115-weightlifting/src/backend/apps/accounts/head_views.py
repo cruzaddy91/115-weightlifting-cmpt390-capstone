@@ -11,6 +11,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 
+from apps.accounts.models import OrgLaneAssignment
 from apps.accounts.roles import is_head_coach, staff_coach_queryset
 from apps.accounts.org_labels import (
     AGM_PREFIXES,
@@ -28,6 +29,26 @@ User = get_user_model()
 
 def _org_coach_ids(head):
     return [head.id, *list(staff_coach_queryset(head).values_list('pk', flat=True))]
+
+
+def _owned_lane_prefixes(head):
+    prefixes = set(
+        OrgLaneAssignment.objects.filter(head_coach=head).values_list('prefix', flat=True)
+    )
+    prefix = username_prefix(getattr(head, 'username', ''))
+    if prefix in AGM_PREFIXES:
+        prefixes.add(prefix)
+    return prefixes
+
+
+def _actor_role(user):
+    if _is_master_head(user):
+        return 'GMHC'
+    if getattr(user, 'user_type', None) == 'head_coach':
+        return 'AGMHC'
+    if getattr(user, 'user_type', None) == 'coach':
+        return 'LC'
+    return ''
 
 
 def _summary_row(coach, athlete_ids):
@@ -89,7 +110,17 @@ class HeadOrgSummaryView(APIView):
                 .order_by('user_type', 'username')
             )
         else:
-            coaches = [head, *list(staff_coach_queryset(head).order_by('username'))]
+            lane_prefixes = _owned_lane_prefixes(head)
+            staff_qs = staff_coach_queryset(head)
+            if lane_prefixes:
+                staff_qs = User.objects.filter(
+                    Q(reports_to=head) | Q(org_lane_prefix__in=lane_prefixes),
+                    user_type='coach',
+                    is_active=True,
+                    is_staff=False,
+                    is_superuser=False,
+                ).distinct()
+            coaches = [head, *list(staff_qs.order_by('username'))]
         out = []
         for coach in coaches:
             # Roster = athletes whose accountable coach is this user (line or head), not program joins alone.
@@ -120,9 +151,13 @@ class HeadOrgRosterView(APIView):
         head_qs = User.objects.filter(user_type='head_coach', is_active=True, is_staff=False, is_superuser=False)
         athlete_qs = User.objects.filter(user_type='athlete', is_active=True, is_staff=False, is_superuser=False)
         if not master_head:
-            staff_qs = staff_qs.filter(reports_to=head)
+            lane_prefixes = _owned_lane_prefixes(head)
+            staff_qs = staff_qs.filter(Q(reports_to=head) | Q(org_lane_prefix__in=lane_prefixes)).distinct()
             head_qs = head_qs.filter(pk=head.pk)
-            athlete_qs = athlete_qs.filter(Q(primary_coach=head) | Q(primary_coach__reports_to=head))
+            athlete_filter = Q(primary_coach=head) | Q(primary_coach__reports_to=head)
+            if lane_prefixes:
+                athlete_filter |= Q(org_lane_prefix__in=lane_prefixes) | Q(primary_coach__org_lane_prefix__in=lane_prefixes)
+            athlete_qs = athlete_qs.filter(athlete_filter).distinct()
         staff_users = list(
             staff_qs
             .select_related('reports_to')
@@ -134,6 +169,7 @@ class HeadOrgRosterView(APIView):
                 'username': coach.username,
                 'reports_to_id': coach.reports_to_id,
                 'reports_to_username': coach.reports_to.username if coach.reports_to else None,
+                'org_lane_prefix': coach.org_lane_prefix,
                 **org_meta_for_user(coach),
             }
             for coach in staff_users
@@ -143,6 +179,9 @@ class HeadOrgRosterView(APIView):
             {
                 'id': head_coach.id,
                 'username': head_coach.username,
+                'owned_lane_prefixes': list(
+                    OrgLaneAssignment.objects.filter(head_coach=head_coach).values_list('prefix', flat=True)
+                ),
                 **org_meta_for_user(head_coach),
             }
             for head_coach in head_users
@@ -158,6 +197,13 @@ class HeadOrgRosterView(APIView):
                 'username': athlete.username,
                 'primary_coach_id': athlete.primary_coach_id,
                 'primary_coach_username': athlete.primary_coach.username if athlete.primary_coach else None,
+                'org_lane_prefix': athlete.org_lane_prefix,
+                'date_of_birth': athlete.date_of_birth,
+                'skill_team': athlete.skill_team,
+                'skill_team_updated_by_id': athlete.skill_team_updated_by_id,
+                'skill_team_updated_by_username': athlete.skill_team_updated_by.username if athlete.skill_team_updated_by else None,
+                'skill_team_updated_by_role': athlete.skill_team_updated_by_role,
+                'skill_team_updated_at': athlete.skill_team_updated_at,
                 **org_meta_for_user(athlete),
             }
             for athlete in athlete_users
@@ -188,8 +234,9 @@ class HeadStaffInviteView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
         coach.reports_to = head
+        coach.org_lane_prefix = head.org_lane_prefix or username_prefix(head.username) or ''
         coach.full_clean()
-        coach.save(update_fields=['reports_to'])
+        coach.save(update_fields=['reports_to', 'org_lane_prefix'])
         return Response(
             {'id': coach.id, 'username': coach.username, 'reports_to_id': head.id},
             status=status.HTTP_200_OK,
@@ -223,17 +270,21 @@ class HeadStaffLinkView(APIView):
             with transaction.atomic():
                 if unassign_requested:
                     User.objects.filter(user_type='athlete', primary_coach_id=coach.id).update(
-                        primary_coach=None
+                        primary_coach=None,
+                        org_lane_prefix='',
                     )
                     TrainingProgram.objects.filter(coach=coach).update(
                         coach=head,
                         updated_at=timezone.now(),
                     )
                     coach.reports_to = None
+                    coach.org_lane_prefix = ''
                 else:
                     coach.reports_to = target_head
+                    target_prefix = target_head.org_lane_prefix or username_prefix(target_head.username) or ''
+                    coach.org_lane_prefix = target_prefix if target_prefix in AGM_PREFIXES else ''
                 coach.full_clean()
-                coach.save(update_fields=['reports_to'])
+                coach.save(update_fields=['reports_to', 'org_lane_prefix'])
             return Response(
                 {'id': coach.id, 'username': coach.username, 'reports_to_id': coach.reports_to_id},
                 status=status.HTTP_200_OK,
@@ -252,8 +303,9 @@ class HeadStaffLinkView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
             coach.reports_to = head
+            coach.org_lane_prefix = head.org_lane_prefix or username_prefix(head.username) or ''
             coach.full_clean()
-            coach.save(update_fields=['reports_to'])
+            coach.save(update_fields=['reports_to', 'org_lane_prefix'])
         else:
             if coach.reports_to_id != head.id:
                 return Response(
@@ -263,14 +315,16 @@ class HeadStaffLinkView(APIView):
             # Line coach leaving: head temporarily owns their roster + programs until reassigned.
             with transaction.atomic():
                 User.objects.filter(user_type='athlete', primary_coach_id=coach.id).update(
-                    primary_coach=head
+                    primary_coach=head,
+                    org_lane_prefix=head.org_lane_prefix or username_prefix(head.username) or '',
                 )
                 TrainingProgram.objects.filter(coach=coach).update(
                     coach=head,
                     updated_at=timezone.now(),
                 )
                 coach.reports_to = None
-                coach.save(update_fields=['reports_to'])
+                coach.org_lane_prefix = ''
+                coach.save(update_fields=['reports_to', 'org_lane_prefix'])
         return Response(
             {'id': coach.id, 'username': coach.username, 'reports_to_id': coach.reports_to_id},
             status=status.HTTP_200_OK,
@@ -287,19 +341,22 @@ class HeadStaffLinkView(APIView):
         now = timezone.now()
         with transaction.atomic():
             User.objects.filter(user_type='athlete', primary_coach_id=coach.id).update(
-                primary_coach=None
+                primary_coach=None,
+                org_lane_prefix='',
             )
             TrainingProgram.objects.filter(coach=coach).update(
                 coach=head,
                 updated_at=now,
             )
             coach.reports_to = None
+            coach.org_lane_prefix = ''
             _soft_delete_user(coach, head, now)
             coach.full_clean()
             coach.save(
                 update_fields=[
                     'is_active',
                     'reports_to',
+                    'org_lane_prefix',
                     'deleted_at',
                     'deleted_by',
                     'recoverable_until',
@@ -356,8 +413,10 @@ class HeadCoachAssignmentView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
             head_coach.username = next_username
+            head_coach.org_lane_prefix = ''
             head_coach.full_clean()
-            head_coach.save(update_fields=['username'])
+            head_coach.save(update_fields=['username', 'org_lane_prefix'])
+            OrgLaneAssignment.objects.filter(head_coach=head_coach).update(head_coach=None, updated_by=request.user)
             return Response(
                 {
                     'id': head_coach.id,
@@ -388,8 +447,13 @@ class HeadCoachAssignmentView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
         head_coach.username = next_username
+        head_coach.org_lane_prefix = category_prefix
         head_coach.full_clean()
-        head_coach.save(update_fields=['username'])
+        head_coach.save(update_fields=['username', 'org_lane_prefix'])
+        OrgLaneAssignment.objects.update_or_create(
+            prefix=category_prefix,
+            defaults={'head_coach': head_coach, 'updated_by': request.user},
+        )
         return Response(
             {
                 'id': head_coach.id,
@@ -506,8 +570,13 @@ class HeadAthletePrimaryCoachView(APIView):
             )
         with transaction.atomic():
             athlete.primary_coach = coach
+            if coach.user_type == 'coach' and coach.org_lane_prefix:
+                athlete.org_lane_prefix = coach.org_lane_prefix
+            elif coach.user_type == 'head_coach':
+                coach_prefix = username_prefix(coach.username)
+                athlete.org_lane_prefix = coach_prefix if coach_prefix in AGM_PREFIXES or coach_prefix == GM_PREFIX else ''
             athlete.full_clean()
-            athlete.save(update_fields=['primary_coach'])
+            athlete.save(update_fields=['primary_coach', 'org_lane_prefix'])
             # Keep program ownership + log/PR auth in sync: all this athlete's programs
             # belong to the accountable coach so the previous coach loses edit/list access.
             TrainingProgram.objects.filter(athlete=athlete).update(
@@ -556,6 +625,76 @@ class HeadAthletePrimaryCoachView(APIView):
                 'is_active': athlete.is_active,
                 'deleted_at': athlete.deleted_at,
                 'recoverable_until': athlete.recoverable_until,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class HeadAthleteSkillTeamView(APIView):
+    """Assign athlete skill teams with GMHC/AGMHC/LC downflow controls."""
+
+    def patch(self, request, user_id):
+        actor = request.user
+        actor_role = _actor_role(actor)
+        if actor_role not in {'GMHC', 'AGMHC', 'LC'}:
+            return Response(
+                {'detail': 'Only coaches can assign athlete skill teams.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        athlete = get_object_or_404(User, pk=user_id, user_type='athlete', is_active=True)
+        skill_team = str(request.data.get('skill_team') or '').strip().upper()
+        allowed_teams = {choice for choice, _label in User.SKILL_TEAM_CHOICES}
+        if skill_team not in allowed_teams:
+            return Response(
+                {'skill_team': ['Choose NOBLE, RED, SILVER, or BLUE.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        previous_role = athlete.skill_team_updated_by_role or ''
+        permitted = False
+        if actor_role == 'GMHC':
+            permitted = True
+        elif actor_role == 'AGMHC':
+            lane_prefixes = _owned_lane_prefixes(actor)
+            athlete_lane = athlete.org_lane_prefix or org_meta_for_user(athlete).get('org_prefix')
+            permitted = athlete_lane in lane_prefixes and previous_role in {'', 'AGMHC', 'LC'}
+        elif actor_role == 'LC':
+            permitted = athlete.primary_coach_id == actor.id and previous_role in {'', 'LC'}
+
+        if not permitted:
+            return Response(
+                {
+                    'detail': (
+                        'Skill-team change requires a request because the last assignment '
+                        'came from a higher access level or outside your lane.'
+                    ),
+                    'request_required': True,
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        athlete.skill_team = skill_team
+        athlete.skill_team_updated_by = actor
+        athlete.skill_team_updated_by_role = actor_role
+        athlete.skill_team_updated_at = timezone.now()
+        athlete.full_clean()
+        athlete.save(
+            update_fields=[
+                'skill_team',
+                'skill_team_updated_by',
+                'skill_team_updated_by_role',
+                'skill_team_updated_at',
+            ],
+        )
+        return Response(
+            {
+                'id': athlete.id,
+                'username': athlete.username,
+                'skill_team': athlete.skill_team,
+                'skill_team_updated_by_id': athlete.skill_team_updated_by_id,
+                'skill_team_updated_by_username': actor.username,
+                'skill_team_updated_by_role': athlete.skill_team_updated_by_role,
+                'skill_team_updated_at': athlete.skill_team_updated_at,
             },
             status=status.HTTP_200_OK,
         )

@@ -331,3 +331,33 @@ def seed_longterm_for_usernames(
         deleted_prs=deleted_prs,
         deleted_workouts=deleted_workouts,
     )
+
+
+def profile_for_skill_team(*, username: str, skill_team: str, gender: str, bodyweight_kg: Decimal | float | int) -> dict:
+    """Build a deterministic history profile for UAT3 generated athletes."""
+    rng = random.Random(hash(f'uat3-profile:{username}') & 0xFFFFFFFF)
+    skill_ranges = {
+        'NOBLE': ((104, 134), (134, 169)),
+        'RED': ((80, 110), (102, 138)),
+        'SILVER': ((58, 86), (76, 108)),
+        'BLUE': ((35, 62), (48, 82)),
+    }
+    sn_range, cj_range = skill_ranges.get(skill_team or 'BLUE', skill_ranges['BLUE'])
+    bodyweight = float(bodyweight_kg or 75)
+    gender_factor = 0.72 if gender == 'F' else 1.0
+    bw_factor = max(0.72, min(1.18, bodyweight / 82.0))
+    start_sn = round(rng.uniform(*sn_range) * gender_factor * bw_factor, 1)
+    start_cj = round(rng.uniform(*cj_range) * gender_factor * bw_factor, 1)
+    growth = {
+        'NOBLE': rng.uniform(1.06, 1.16),
+        'RED': rng.uniform(1.12, 1.25),
+        'SILVER': rng.uniform(1.18, 1.34),
+        'BLUE': rng.uniform(1.25, 1.55),
+    }.get(skill_team or 'BLUE', rng.uniform(1.22, 1.5))
+    return {
+        'tier': skill_team.lower() if skill_team else 'unassigned',
+        'bodyweight_kg': bodyweight_kg,
+        'gender': gender,
+        'snatch': (start_sn, round(start_sn * growth, 1)),
+        'clean_jerk': (start_cj, round(start_cj * growth, 1)),
+    }

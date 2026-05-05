@@ -240,6 +240,13 @@ export const patchHeadAthletePrimaryCoach = async (athleteId, primaryCoachId) =>
   return data
 }
 
+export const patchHeadAthleteSkillTeam = async (athleteId, skillTeam) => {
+  const { data } = await apiClient.patch(`/api/auth/head/athletes/${athleteId}/skill-team/`, {
+    skill_team: skillTeam,
+  })
+  return data
+}
+
 export const deleteHeadAthlete = async (athleteId) => {
   const { data } = await apiClient.delete(`/api/auth/head/athletes/${athleteId}/`)
   return data

@@ -7,6 +7,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from apps.accounts.demo_provisioning import provision_uat3_scenario
+from apps.accounts.models import OrgLaneAssignment
 from apps.accounts.org_labels import DEMO_UNASSIGNED_ATHLETE_USERNAMES
 from apps.accounts.weight_class import competitive_weight_class_label
 from apps.athletes.models import PersonalRecord, ProgramCompletion
@@ -687,6 +689,63 @@ class HeadRosterAssignmentTests(TestCase):
         self.assertEqual({row['username'] for row in j['staff']}, {'line_ra'})
         self.assertEqual({row['username'] for row in j['athletes']}, {'ath_ra'})
 
+    def test_multi_lane_agm_roster_uses_lane_ownership(self):
+        agm = User.objects.create_user(
+            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        OrgLaneAssignment.objects.create(prefix='001', head_coach=agm)
+        OrgLaneAssignment.objects.create(prefix='002', head_coach=agm)
+        line_002 = User.objects.create_user(
+            username='034_Coachlane2', password='longenoughpw1', user_type='coach', org_lane_prefix='002',
+        )
+        athlete_002 = User.objects.create_user(
+            username='035_Athletelane2', password='longenoughpw1', user_type='athlete', org_lane_prefix='002',
+        )
+        athlete_002.primary_coach = line_002
+        athlete_002.save(update_fields=['primary_coach'])
+        line_003 = User.objects.create_user(
+            username='036_Coachlane3', password='longenoughpw1', user_type='coach', org_lane_prefix='003',
+        )
+
+        self.client.force_authenticate(user=agm)
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        self.assertIn('034_Coachlane2', {row['username'] for row in j['staff']})
+        self.assertIn('035_Athletelane2', {row['username'] for row in j['athletes']})
+        self.assertNotIn(line_003.username, {row['username'] for row in j['staff']})
+
+    def test_skill_team_change_permissions_follow_downflow(self):
+        gm = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        agm = User.objects.create_user(
+            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        OrgLaneAssignment.objects.create(prefix='001', head_coach=agm)
+        line = User.objects.create_user(
+            username='008_Coachone', password='longenoughpw1', user_type='coach', reports_to=agm, org_lane_prefix='001',
+        )
+        athlete = User.objects.create_user(
+            username='000_Athlete1', password='longenoughpw1', user_type='athlete', primary_coach=line, org_lane_prefix='001',
+        )
+
+        self.client.force_authenticate(user=gm)
+        r = self.client.patch(reverse('head-athlete-skill-team', args=[athlete.id]), {'skill_team': 'NOBLE'}, format='json')
+        self.assertEqual(r.status_code, 200)
+
+        self.client.force_authenticate(user=agm)
+        blocked = self.client.patch(reverse('head-athlete-skill-team', args=[athlete.id]), {'skill_team': 'RED'}, format='json')
+        self.assertEqual(blocked.status_code, 403)
+        self.assertTrue(blocked.json()['request_required'])
+
+        athlete.skill_team_updated_by = line
+        athlete.skill_team_updated_by_role = 'LC'
+        athlete.save(update_fields=['skill_team_updated_by', 'skill_team_updated_by_role'])
+        allowed = self.client.patch(reverse('head-athlete-skill-team', args=[athlete.id]), {'skill_team': 'RED'}, format='json')
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.json()['skill_team'], 'RED')
+
     def test_roster_includes_inherited_org_color_metadata(self):
         prefixed_head = User.objects.create_user(
             username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
@@ -826,7 +885,7 @@ class HeadRosterAssignmentTests(TestCase):
         )
         self.assertEqual(r.status_code, 403)
 
-    def test_roster_includes_unassigned_athletes(self):
+    def test_non_master_roster_excludes_unassigned_and_outside_athletes(self):
         unassigned = User.objects.create_user(
             username='ath_unassigned_ra', password='longenoughpw1', user_type='athlete',
         )
@@ -843,8 +902,8 @@ class HeadRosterAssignmentTests(TestCase):
         r = self.client.get(reverse('head-org-roster'))
         self.assertEqual(r.status_code, 200)
         names = {row['username'] for row in r.json()['athletes']}
-        self.assertIn(unassigned.username, names)
-        self.assertIn(outside.username, names)
+        self.assertNotIn(unassigned.username, names)
+        self.assertNotIn(outside.username, names)
 
     def test_roster_hides_inactive_archived_users(self):
         archived_coach = User.objects.create_user(
@@ -1245,6 +1304,53 @@ class HeadRosterAssignmentTests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
         r = self.client.get(reverse('head-org-roster'))
         self.assertEqual(r.status_code, 403)
+
+
+class DemoProvisioningTests(TestCase):
+    @mock.patch('apps.accounts.demo_provisioning._seed_programs_and_history', return_value=(7, 21, 42))
+    def test_fully_loaded_distribution(self, _seed_history):
+        result = provision_uat3_scenario(scenario='fully_loaded')
+
+        self.assertEqual(result.athletes, 120)
+        self.assertEqual(OrgLaneAssignment.objects.filter(head_coach__isnull=False).count(), 4)
+        self.assertEqual(User.objects.filter(user_type='coach', reports_to__isnull=False).count(), 8)
+        self.assertEqual(User.objects.filter(user_type='athlete', skill_team='NOBLE').count(), 16)
+        self.assertEqual(User.objects.filter(user_type='athlete', skill_team='RED').count(), 32)
+        self.assertEqual(User.objects.filter(user_type='athlete', skill_team='SILVER').count(), 8)
+        self.assertEqual(User.objects.filter(user_type='athlete', skill_team='BLUE').count(), 64)
+
+    @mock.patch('apps.accounts.demo_provisioning._seed_programs_and_history', return_value=(7, 21, 42))
+    def test_half_cock_assigns_two_lanes_per_agm(self, _seed_history):
+        result = provision_uat3_scenario(scenario='half_cock')
+
+        self.assertEqual(result.athletes, 32)
+        lane_001 = OrgLaneAssignment.objects.get(prefix='001')
+        lane_002 = OrgLaneAssignment.objects.get(prefix='002')
+        lane_003 = OrgLaneAssignment.objects.get(prefix='003')
+        lane_004 = OrgLaneAssignment.objects.get(prefix='004')
+        self.assertEqual(lane_001.head_coach_id, lane_002.head_coach_id)
+        self.assertEqual(lane_003.head_coach_id, lane_004.head_coach_id)
+        self.assertNotEqual(lane_001.head_coach_id, lane_003.head_coach_id)
+
+    @mock.patch('apps.accounts.demo_provisioning._seed_programs_and_history', return_value=(7, 21, 42))
+    def test_skeleton_keeps_assignments_empty_but_counts_loaded(self, _seed_history):
+        result = provision_uat3_scenario(scenario='skeleton')
+
+        self.assertEqual(result.athletes, 120)
+        self.assertEqual(OrgLaneAssignment.objects.filter(head_coach__isnull=False).count(), 0)
+        self.assertEqual(User.objects.filter(user_type='coach', reports_to__isnull=False).count(), 0)
+        self.assertEqual(User.objects.filter(user_type='athlete', primary_coach__isnull=False).count(), 0)
+        self.assertEqual(User.objects.filter(user_type='athlete').exclude(skill_team='').count(), 0)
+
+    @mock.patch('apps.accounts.demo_provisioning._seed_programs_and_history', return_value=(7, 21, 42))
+    def test_bare_base_assigns_ten_athletes_to_gm(self, _seed_history):
+        result = provision_uat3_scenario(scenario='bare_base')
+
+        gm = User.objects.get(username='117_HeadcoachGM')
+        self.assertEqual(result.athletes, 10)
+        self.assertEqual(User.objects.filter(user_type='head_coach').exclude(username='117_HeadcoachGM').count(), 0)
+        self.assertEqual(User.objects.filter(user_type='coach').count(), 0)
+        self.assertEqual(User.objects.filter(user_type='athlete', primary_coach=gm).count(), 10)
 
 
 class DemoPruneCommandTests(TestCase):

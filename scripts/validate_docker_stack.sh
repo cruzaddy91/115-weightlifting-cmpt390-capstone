@@ -74,7 +74,7 @@ write_summary() {
 ## Artifacts
 
 - docker_uat_latest.json
-- auth_stress_045_coachone_latest.json
+- auth_stress_008_coachone_latest.json
 - auth_stress_000_athlete1_latest.json
 - ssvc_clean_before_uat_latest.txt
 - ssvc_clean_after_uat_latest.txt

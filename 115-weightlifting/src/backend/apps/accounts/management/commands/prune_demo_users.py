@@ -17,6 +17,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.accounts.demo_provisioning import provision_uat3_scenario
 from apps.accounts.org_labels import (
     DEMO_ATHLETE_USERNAME,
     DEMO_COACH_USERNAME,
@@ -68,6 +69,10 @@ def _release_demo_email(email: str, except_user=None):
 def _canonical_usernames() -> tuple[str, ...]:
     return (
         *DEMO_HEAD_COACH_USERNAMES,
+        '001_Headcoachone',
+        '002_Headcoachtwo',
+        '003_Headcoachthree',
+        '004_Headcoachfour',
         *DEMO_LINE_COACH_USERNAMES,
         DEMO_ATHLETE_USERNAME,
         *DEMO_UNASSIGNED_ATHLETE_USERNAMES,
@@ -305,8 +310,16 @@ class Command(BaseCommand):
         protected_ids = set(protected.values_list('id', flat=True))
 
         if apply and not options['no_ensure_canonical']:
-            info = _ensure_canonical_users(demo_password)
-            self.stdout.write(self.style.SUCCESS(f'Canonical users refreshed: {info["users_refreshed"]}'))
+            if permanent_clean:
+                result = provision_uat3_scenario(
+                    scenario='preserve_current',
+                    replace_history=False,
+                    password=demo_password,
+                )
+                self.stdout.write(self.style.SUCCESS(f'UAT3 preserved baseline refreshed: {result}'))
+            else:
+                info = _ensure_canonical_users(demo_password)
+                self.stdout.write(self.style.SUCCESS(f'Canonical users refreshed: {info["users_refreshed"]}'))
 
         candidates = User.objects.filter(
             user_type__in=('coach', 'athlete', 'head_coach'),

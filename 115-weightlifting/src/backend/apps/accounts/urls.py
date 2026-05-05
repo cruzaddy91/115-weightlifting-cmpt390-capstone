@@ -1,6 +1,7 @@
 from django.urls import path
 from .head_views import (
     HeadAthletePrimaryCoachView,
+    HeadAthleteSkillTeamView,
     HeadCoachAssignmentView,
     HeadOrgRosterView,
     HeadOrgSummaryView,
@@ -33,4 +34,5 @@ urlpatterns = [
     path('head/staff/<int:user_id>/', HeadStaffLinkView.as_view(), name='head-staff-link'),
     path('head/head-coaches/<int:user_id>/', HeadCoachAssignmentView.as_view(), name='head-coach-assignment'),
     path('head/athletes/<int:user_id>/', HeadAthletePrimaryCoachView.as_view(), name='head-athlete-primary-coach'),
+    path('head/athletes/<int:user_id>/skill-team/', HeadAthleteSkillTeamView.as_view(), name='head-athlete-skill-team'),
 ]

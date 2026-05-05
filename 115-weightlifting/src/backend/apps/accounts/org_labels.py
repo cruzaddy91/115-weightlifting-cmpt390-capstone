@@ -113,5 +113,11 @@ def effective_org_source(user):
 
 
 def org_meta_for_user(user):
+    explicit_prefix = getattr(user, 'org_lane_prefix', '') or ''
+    if explicit_prefix:
+        return org_meta_for_prefix(explicit_prefix)
     source = effective_org_source(user)
+    source_prefix = getattr(source, 'org_lane_prefix', '') or ''
+    if source_prefix:
+        return org_meta_for_prefix(source_prefix)
     return org_meta_for_prefix(username_prefix(getattr(source, 'username', '')))

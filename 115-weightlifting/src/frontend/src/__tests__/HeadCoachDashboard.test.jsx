@@ -1,4 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { act } from 'react'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { fireEvent, render, screen } from '@testing-library/react'
 import HeadCoachDashboard from '../pages/HeadCoachDashboard'
@@ -18,6 +19,7 @@ vi.mock('../services/api', () => ({
   getHeadProgramNameOutcomes: vi.fn(),
   getHeadRecommendations: vi.fn(),
   patchHeadAthletePrimaryCoach: vi.fn(),
+  patchHeadAthleteSkillTeam: vi.fn(),
   patchHeadCoachCategory: vi.fn(),
   patchHeadStaffAssignment: vi.fn(),
   postHeadStaffInvite: vi.fn(),
@@ -30,6 +32,7 @@ import {
   getHeadProgramStyleOutcomes,
   getHeadProgramNameOutcomes,
   getHeadRecommendations,
+  postHeadStaffInvite,
 } from '../services/api'
 
 describe('HeadCoachDashboard UAT 3 shell', () => {
@@ -39,15 +42,15 @@ describe('HeadCoachDashboard UAT 3 shell', () => {
     getHeadOrgRoster.mockResolvedValue({
       head_coaches: [
         { id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
-        { id: 4, username: '001_Headcoachone', user_type: 'head_coach', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
+        { id: 4, username: '001_Headcoachone', user_type: 'head_coach', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver', owned_lane_prefixes: ['001'] },
       ],
       staff: [
         { id: 2, username: '008_Coachone', user_type: 'coach', reports_to_id: 1, reports_to_username: '117_HeadcoachGM', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
         { id: 5, username: '013_Coachtwo', user_type: 'coach', reports_to_id: 4, reports_to_username: '001_Headcoachone', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
       ],
       athletes: [
-        { id: 3, username: '000_Athlete1', primary_coach_id: 2, primary_coach_username: '008_Coachone', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
-        { id: 6, username: '009_Athlete5', primary_coach_id: 5, primary_coach_username: '013_Coachtwo', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
+        { id: 3, username: '000_Athlete1', primary_coach_id: 2, primary_coach_username: '008_Coachone', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green', skill_team: 'NOBLE' },
+        { id: 6, username: '009_Athlete5', primary_coach_id: 5, primary_coach_username: '013_Coachtwo', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver', skill_team: 'BLUE' },
       ],
     })
     getHeadModelStatus.mockResolvedValue({
@@ -85,6 +88,10 @@ describe('HeadCoachDashboard UAT 3 shell', () => {
         },
       ],
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders role-aware workspace tabs', async () => {
@@ -125,6 +132,59 @@ describe('HeadCoachDashboard UAT 3 shell', () => {
     expect(screen.getAllByText(/@001_Headcoachone/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/@013_Coachtwo/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/@009_Athlete5/i).length).toBeGreaterThan(0)
+  })
+
+  it('renders athletes grouped by skill team labels', async () => {
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+
+    expect((await screen.findAllByText(/NOBLE TEAM/i)).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/BLUE TEAM/i).length).toBeGreaterThan(0)
+    expect(screen.getByLabelText(/Skill team for 000_Athlete1/i)).toBeTruthy()
+  })
+
+  it('shows assignment feedback as a hover-pausable toast', async () => {
+    vi.useFakeTimers()
+    postHeadStaffInvite.mockResolvedValue({ id: 99, username: 'new_line' })
+
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    fireEvent.change(screen.getByPlaceholderText(/Line coach username/i), {
+      target: { value: 'new_line' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Add to org/i }))
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const toast = screen.getByRole('status')
+    expect(toast.textContent).toContain('Linked @new_line.')
+
+    fireEvent.mouseEnter(toast)
+    act(() => {
+      vi.advanceTimersByTime(7000)
+    })
+    expect(screen.getByRole('status')).toBeTruthy()
+
+    fireEvent.mouseLeave(toast)
+    act(() => {
+      vi.advanceTimersByTime(4500)
+    })
+    expect(screen.queryByRole('status')).toBeNull()
   })
 })
 

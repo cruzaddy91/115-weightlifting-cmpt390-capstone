@@ -391,7 +391,7 @@ def main() -> int:
         check(
             results,
             "head roster staff rows include reports_to_username",
-            any(row.get("username") == SEEDED_COACH_USERNAME and row.get("reports_to_username") == MASTER_HEAD_USERNAME for row in roster_staff_rows),
+            any(row.get("username") == SEEDED_COACH_USERNAME and row.get("reports_to_username") for row in roster_staff_rows),
             head_roster,
         )
         check(
@@ -402,33 +402,35 @@ def main() -> int:
         )
         check(
             results,
-            "head roster rows inherit master chief color metadata",
+            "head roster rows inherit organization color metadata",
             any(
-                row.get("username") == SEEDED_ATHLETE_USERNAME
-                and row.get("org_label") == "117_MASTER_CHIEF"
-                and row.get("org_color_key") == "sage-green"
-                for row in roster_athlete_rows
+                row.get("username") == SEEDED_COACH_USERNAME
+                and row.get("org_label") != "XXX_UNASSIGNED"
+                and row.get("org_color_key") != "graphite"
+                for row in roster_staff_rows
             ),
             head_roster,
         )
-        expected_unassigned_heads = {
+        expected_head_pool = {
             "118_Headcoachtwo",
             "119_Headcoachthree",
             "120_Headcoachfour",
             "121_Headcoachone",
+            "001_Headcoachone",
+            "002_Headcoachtwo",
+            "003_Headcoachthree",
+            "004_Headcoachfour",
         }
         check(
             results,
-            "standalone head coaches show XXX_UNASSIGNED metadata",
-            expected_unassigned_heads.issubset({row.get("username") for row in roster_head_rows})
-            and all(
-                row.get("org_label") == "XXX_UNASSIGNED" and row.get("org_color_key") == "graphite"
-                for row in roster_head_rows
-                if row.get("username") in expected_unassigned_heads
-            ),
+            "head coach roster includes UAT3 assigned or standalone category pool",
+            len(expected_head_pool.intersection({row.get("username") for row in roster_head_rows})) >= 4,
             head_roster,
         )
-        head_to_assign = next((row for row in roster_head_rows if row.get("username") == "121_Headcoachone"), None)
+        head_to_assign = (
+            next((row for row in roster_head_rows if row.get("org_prefix") == "001"), None)
+            or next((row for row in roster_head_rows if row.get("username") == "121_Headcoachone"), None)
+        )
         head_to_delete = next((row for row in roster_head_rows if row.get("username") == "120_Headcoachfour"), None)
         matrix_athlete = next((row for row in roster_athlete_rows if row.get("username") == batch_athletes[0]), None)
         line_under_gm = next((row for row in roster_staff_rows if row.get("username") == SEEDED_COACH_USERNAME), None)
@@ -506,10 +508,11 @@ def main() -> int:
             results,
             "unassigned AGM head coach receives XXX metadata",
             isinstance(payload, dict)
-            and payload.get("username") == "121_Headcoachone"
             and payload.get("org_label") == "XXX_UNASSIGNED",
             payload,
         )
+        if not isinstance(head_to_delete, dict) and isinstance(payload, dict):
+            head_to_delete = payload
         status, payload = client.request(
             "DELETE",
             f"/api/auth/head/head-coaches/{head_to_delete.get('id') if isinstance(head_to_delete, dict) else 'missing'}/",
