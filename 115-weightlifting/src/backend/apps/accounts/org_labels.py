@@ -10,30 +10,30 @@ DEMO_HEAD_COACH_USERNAMES = (
     '120_Headcoachfour',
     '121_Headcoachone',
 )
-DEMO_COACH_USERNAME = '045_Coachone'
+DEMO_COACH_USERNAME = '008_Coachone'
 DEMO_LINE_COACH_USERNAMES = (
     DEMO_COACH_USERNAME,
-    '034_Coachtwo',
-    '088_Coachthree',
-    '013_Coachfour',
+    '013_Coachtwo',
+    '048_Coachthree',
+    '088_Coachtfour',
 )
 DEMO_ATHLETE_USERNAME = '000_Athlete1'
 DEMO_UNASSIGNED_ATHLETE_USERNAMES = (
     '005_Athlete2',
     '006_Athlete3',
     '007_Athlete4',
-    '008_Athlete5',
-    '009_Athlete6',
-    '010_Athlete7',
-    '011_Athlete8',
-    '012_Athlete9',
-    '014_Athlete10',
-    '015_Athlete11',
-    '016_Athlete12',
-    '017_Athlete13',
-    '018_Athlete14',
-    '019_Athlete15',
-    '020_Athlete16',
+    '009_Athlete5',
+    '010_Athlete6',
+    '011_Athlete7',
+    '012_Athlete8',
+    '014_Athlete9',
+    '015_Athlete10',
+    '016_Athlete11',
+    '017_Athlete12',
+    '018_Athlete13',
+    '019_Athlete14',
+    '020_Athlete15',
+    '021_Athlete16',
 )
 
 GM_PREFIX = '117'

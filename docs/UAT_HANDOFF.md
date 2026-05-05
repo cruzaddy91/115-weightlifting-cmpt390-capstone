@@ -27,9 +27,9 @@ Current canonical demo roster:
 
 - GM: `117_HeadcoachGM`
 - Standalone head coaches: `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachone`
-- Line coaches: `045_Coachone`, `034_Coachtwo`, `088_Coachthree`, `013_Coachfour`
+- Line coaches: `008_Coachone`, `013_Coachtwo`, `048_Coachthree`, `088_Coachtfour`
 - Assigned primary athlete: `000_Athlete1`
-- Unassigned athlete pool: `005_Athlete2` through `020_Athlete16`, skipping `013_` because `013_Coachfour` owns that prefix
+- Unassigned athlete pool: `005_Athlete2` through `021_Athlete16`, skipping `008_` and `013_` because line coaches own those prefixes
 
 Tag propagation currently works as follows:
 

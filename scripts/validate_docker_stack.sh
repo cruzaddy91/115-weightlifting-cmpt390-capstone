@@ -130,13 +130,13 @@ python3 "$ROOT_DIR/scripts/docker_uat.py" \
   --coach-signup-code "$UAT_COACH_SIGNUP_CODE" \
   > "$REPORT_DIR/docker_uat_latest.json"
 
-echo "Running auth stress for 045_Coachone..."
+echo "Running auth stress for 008_Coachone..."
 python3 "$ROOT_DIR/scripts/docker_auth_stress.py" \
   --backend-url "$BACKEND_URL" \
-  --username "045_Coachone" \
+  --username "008_Coachone" \
   --password "$DEMO_PASSWORD" \
   --cycles "$STRESS_CYCLES" \
-  > "$REPORT_DIR/auth_stress_045_coachone_latest.json"
+  > "$REPORT_DIR/auth_stress_008_coachone_latest.json"
 
 echo "Running auth stress for 000_Athlete1..."
 python3 "$ROOT_DIR/scripts/docker_auth_stress.py" \

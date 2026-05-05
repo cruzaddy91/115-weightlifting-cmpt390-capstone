@@ -34,10 +34,10 @@ Suggested walkthrough accounts:
 | --- | --- | --- |
 | GM head coach | `117_HeadcoachGM` | <http://localhost:4173/head> |
 | Standalone head coaches | `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachone` | <http://localhost:4173/head> |
-| Primary line coach | `045_Coachone` | <http://localhost:4173/coach> |
-| Demo line coaches | `034_Coachtwo`, `088_Coachthree`, `013_Coachfour` | <http://localhost:4173/coach> |
+| Primary line coach | `008_Coachone` | <http://localhost:4173/coach> |
+| Demo line coaches | `013_Coachtwo`, `048_Coachthree`, `088_Coachtfour` | <http://localhost:4173/coach> |
 | Athlete | `000_Athlete1` | <http://localhost:4173/athlete> |
-| Unassigned athletes | `005_Athlete2` through `020_Athlete16`, skipping `013_` because it belongs to `013_Coachfour` | <http://localhost:4173/athlete> |
+| Unassigned athletes | `005_Athlete2` through `021_Athlete16`, skipping `008_` and `013_` because those prefixes belong to line coaches | <http://localhost:4173/athlete> |
 
 The `000_Athlete1` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
 The 15 unassigned athlete accounts are intentionally active with no accountable coach so the GM dashboard can exercise manual assignment to either a head coach or a line coach. They display with the `XXX_UNASSIGNED` organization tag until assigned.
@@ -103,7 +103,7 @@ The harness:
 - verifies email uniqueness and the password-reset flow;
 - checks RBAC denial paths for cross-coach and cross-athlete access;
 - verifies category/color metadata for the head-coach roster;
-- runs auth stress cycles for `045_Coachone` and `000_Athlete1`.
+- runs auth stress cycles for `008_Coachone` and `000_Athlete1`.
 
 Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.
 

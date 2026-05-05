@@ -74,6 +74,15 @@ UAT 3.0 schedule starts simple. UAT 4.0 can add:
 - Weekend and holiday handling.
 - Read-only views for most roles, editable views for GMHC and delegated AGMHCs.
 
+## Numbering System UAT
+
+Use line-coach prefixes as coverage examples for coach-selected numbers and athlete auto-assignment availability:
+
+- `008_Coachone`
+- `013_Coachtwo`
+
+These should help validate that athlete auto-assignment skips unavailable normal-member prefixes and that coach username selection respects available numbers.
+
 ## Possible Point Of Sale
 
 Possible future POS connection. This needs careful regulatory, privacy, tax, and payment-processing review before implementation.

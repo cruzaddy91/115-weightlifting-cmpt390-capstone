@@ -87,6 +87,22 @@ legacy_demo_usernames = [
     'Coachone',
     '005_Coachone',
     '100_Coachone',
+    '045_Coachone',
+    '034_Coachtwo',
+    '088_Coachthree',
+    '013_Coachfour',
+    '008_Athlete5',
+    '009_Athlete6',
+    '010_Athlete7',
+    '011_Athlete8',
+    '012_Athlete9',
+    '014_Athlete10',
+    '015_Athlete11',
+    '016_Athlete12',
+    '017_Athlete13',
+    '018_Athlete14',
+    '019_Athlete15',
+    '020_Athlete16',
     '000_athelteone',
     'jon_snow',
     'arya_stark',
@@ -104,6 +120,10 @@ legacy_demo_usernames = [
 migrate_user_identity('117_Headcoachone', MASTER_HEAD_USERNAME)
 migrate_user_identity('121_Headcoachfive', '121_Headcoachone')
 migrate_user_identity('001_Headcoachfive', '001_Headcoachone')
+migrate_user_identity('045_Coachone', '008_Coachone')
+migrate_user_identity('034_Coachtwo', '013_Coachtwo')
+migrate_user_identity('088_Coachthree', '048_Coachthree')
+migrate_user_identity('013_Coachfour', '088_Coachtfour')
 
 head, _ = User.objects.get_or_create(username=MASTER_HEAD_USERNAME, defaults={'user_type': 'head_coach'})
 head.user_type = 'head_coach'
@@ -156,7 +176,7 @@ for username in DEMO_LINE_COACH_USERNAMES:
     line_coaches[username] = coach
 coach = line_coaches[DEMO_COACH_USERNAME]
 
-legacy_coaches = User.objects.filter(username__in=['Coachone', '005_Coachone', '100_Coachone'])
+legacy_coaches = User.objects.filter(username__in=['Coachone', '005_Coachone', '100_Coachone', '045_Coachone'])
 for legacy_coach in legacy_coaches:
     User.objects.filter(primary_coach=legacy_coach).update(primary_coach=coach)
     TrainingProgram.objects.filter(coach=legacy_coach).update(

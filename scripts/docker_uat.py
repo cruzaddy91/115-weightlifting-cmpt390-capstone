@@ -20,24 +20,24 @@ from datetime import date
 
 DEFAULT_PASSWORD = os.getenv("DEMO_PASSWORD", "Passw0rd!123")
 MASTER_HEAD_USERNAME = "117_HeadcoachGM"
-SEEDED_COACH_USERNAME = "045_Coachone"
+SEEDED_COACH_USERNAME = "008_Coachone"
 SEEDED_ATHLETE_USERNAME = "000_Athlete1"
 SEEDED_UNASSIGNED_ATHLETE_USERNAMES = [
     "005_Athlete2",
     "006_Athlete3",
     "007_Athlete4",
-    "008_Athlete5",
-    "009_Athlete6",
-    "010_Athlete7",
-    "011_Athlete8",
-    "012_Athlete9",
-    "014_Athlete10",
-    "015_Athlete11",
-    "016_Athlete12",
-    "017_Athlete13",
-    "018_Athlete14",
-    "019_Athlete15",
-    "020_Athlete16",
+    "009_Athlete5",
+    "010_Athlete6",
+    "011_Athlete7",
+    "012_Athlete8",
+    "014_Athlete9",
+    "015_Athlete10",
+    "016_Athlete11",
+    "017_Athlete12",
+    "018_Athlete13",
+    "019_Athlete14",
+    "020_Athlete15",
+    "021_Athlete16",
 ]
 
 
@@ -249,9 +249,9 @@ def main() -> int:
         register_user(client, staff_reassign_coach, email_for(staff_reassign_coach), "coach", args.password, args.coach_signup_code)
         register_user(client, staff_delete_coach, email_for(staff_delete_coach), "coach", args.password, args.coach_signup_code)
         expected_batch_prefixes = [
-            "021", "022", "023", "024", "025",
-            "026", "027", "028", "029", "030",
-            "031", "032", "033", "035", "036",
+            "022", "023", "024", "025", "026",
+            "027", "028", "029", "030", "031",
+            "032", "033", "034", "035", "036",
         ]
         batch_athletes = []
         for idx, expected_prefix in enumerate(expected_batch_prefixes, start=1):

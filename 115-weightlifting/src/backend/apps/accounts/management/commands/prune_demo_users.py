@@ -103,6 +103,22 @@ def _cleanup_filter():
         'Coachone',
         '005_Coachone',
         '100_Coachone',
+        '045_Coachone',
+        '034_Coachtwo',
+        '088_Coachthree',
+        '013_Coachfour',
+        '008_Athlete5',
+        '009_Athlete6',
+        '010_Athlete7',
+        '011_Athlete8',
+        '012_Athlete9',
+        '014_Athlete10',
+        '015_Athlete11',
+        '016_Athlete12',
+        '017_Athlete13',
+        '018_Athlete14',
+        '019_Athlete15',
+        '020_Athlete16',
         '000_athelteone',
         'jon_snow',
         'arya_stark',
@@ -129,6 +145,10 @@ def _ensure_canonical_users(password: str) -> dict:
     _migrate_user_identity('117_Headcoachone', MASTER_HEAD_USERNAME)
     _migrate_user_identity('121_Headcoachfive', '121_Headcoachone')
     _migrate_user_identity('001_Headcoachfive', '001_Headcoachone')
+    _migrate_user_identity('045_Coachone', '008_Coachone')
+    _migrate_user_identity('034_Coachtwo', '013_Coachtwo')
+    _migrate_user_identity('088_Coachthree', '048_Coachthree')
+    _migrate_user_identity('013_Coachfour', '088_Coachtfour')
 
     head_org, _ = User.objects.get_or_create(
         username=MASTER_HEAD_USERNAME,
@@ -193,7 +213,7 @@ def _ensure_canonical_users(password: str) -> dict:
         created_or_updated.append(username)
     coach = line_coaches[DEMO_COACH_USERNAME]
 
-    legacy_coaches = User.objects.filter(username__in=['Coachone', '005_Coachone', '100_Coachone'])
+    legacy_coaches = User.objects.filter(username__in=['Coachone', '005_Coachone', '100_Coachone', '045_Coachone'])
     for legacy_coach in legacy_coaches:
         User.objects.filter(primary_coach=legacy_coach).update(primary_coach=coach)
         TrainingProgram.objects.filter(coach=legacy_coach).update(

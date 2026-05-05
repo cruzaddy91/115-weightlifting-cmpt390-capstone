@@ -33,25 +33,25 @@ const COACH_ACCENT_CLASSES = [
 ]
 const SHOW_HEAD_ANALYTICS = false
 const EXPECTED_STANDALONE_HEAD_SUFFIXES = ['Headcoachtwo', 'Headcoachthree', 'Headcoachfour', 'Headcoachone']
-const EXPECTED_LINE_COACHES = ['045_Coachone', '034_Coachtwo', '088_Coachthree', '013_Coachfour']
+const EXPECTED_LINE_COACHES = ['008_Coachone', '013_Coachtwo', '048_Coachthree', '088_Coachtfour']
 const EXPECTED_PRIMARY_ATHLETE = '000_Athlete1'
-const EXPECTED_PRIMARY_COACH = '045_Coachone'
+const EXPECTED_PRIMARY_COACH = '008_Coachone'
 const EXPECTED_UNASSIGNED_ATHLETES = [
   '005_Athlete2',
   '006_Athlete3',
   '007_Athlete4',
-  '008_Athlete5',
-  '009_Athlete6',
-  '010_Athlete7',
-  '011_Athlete8',
-  '012_Athlete9',
-  '014_Athlete10',
-  '015_Athlete11',
-  '016_Athlete12',
-  '017_Athlete13',
-  '018_Athlete14',
-  '019_Athlete15',
-  '020_Athlete16',
+  '009_Athlete5',
+  '010_Athlete6',
+  '011_Athlete7',
+  '012_Athlete8',
+  '014_Athlete9',
+  '015_Athlete10',
+  '016_Athlete11',
+  '017_Athlete12',
+  '018_Athlete13',
+  '019_Athlete14',
+  '020_Athlete15',
+  '021_Athlete16',
 ]
 const AGM_CATEGORY_OPTIONS = [
   { prefix: 'XXX_UNASSIGNED', label: 'XXX_UNASSIGNED' },

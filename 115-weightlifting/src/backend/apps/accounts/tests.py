@@ -137,14 +137,14 @@ class CoachRegistrationGateTests(TestCase):
         self.assertEqual(response.json()['username'], '006_reservedskip')
 
     def test_athlete_signup_assigns_first_15_available_prefixes(self):
-        for prefix in ('013', '034', '045', '088'):
+        for prefix in ('008', '013', '048', '088'):
             User.objects.create_user(
                 username=f'{prefix}_coach', password='longenoughpw1', user_type='coach',
             )
         expected_prefixes = [
-            '000', '005', '006', '007', '008',
-            '009', '010', '011', '012', '014',
-            '015', '016', '017', '018', '019',
+            '000', '005', '006', '007', '009',
+            '010', '011', '012', '014', '015',
+            '016', '017', '018', '019', '020',
         ]
 
         actual_usernames = []
@@ -672,7 +672,7 @@ class HeadRosterAssignmentTests(TestCase):
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
         )
         prefixed_line = User.objects.create_user(
-            username='045_Coachone', password='longenoughpw1', user_type='coach',
+            username='008_Coachone', password='longenoughpw1', user_type='coach',
         )
         prefixed_line.reports_to = prefixed_head
         prefixed_line.save(update_fields=['reports_to'])
@@ -687,7 +687,7 @@ class HeadRosterAssignmentTests(TestCase):
         j = r.json()
         head_row = next(row for row in j['head_coaches'] if row['username'] == '117_HeadcoachGM')
         unassigned_head_row = next(row for row in j['head_coaches'] if row['username'] == unassigned_head.username)
-        line_row = next(row for row in j['staff'] if row['username'] == '045_Coachone')
+        line_row = next(row for row in j['staff'] if row['username'] == '008_Coachone')
         athlete_row = next(row for row in j['athletes'] if row['username'] == '000_Athlete1')
         for row in (head_row, line_row, athlete_row):
             self.assertEqual(row['org_prefix'], '117')
@@ -1236,11 +1236,11 @@ class DemoPruneCommandTests(TestCase):
         for username in ('118_Headcoachtwo', '119_Headcoachthree', '120_Headcoachfour', '121_Headcoachone'):
             User.objects.create_user(username=username, password='pw', user_type='head_coach')
         canonical_coach = User.objects.create_user(
-            username='045_Coachone', password='pw', user_type='coach',
+            username='008_Coachone', password='pw', user_type='coach',
         )
         canonical_coach.reports_to = canonical_head
         canonical_coach.save(update_fields=['reports_to'])
-        for username in ('034_Coachtwo', '088_Coachthree', '013_Coachfour'):
+        for username in ('013_Coachtwo', '048_Coachthree', '088_Coachtfour'):
             extra_coach = User.objects.create_user(
                 username=username, password='pw', user_type='coach',
             )
@@ -1271,10 +1271,10 @@ class DemoPruneCommandTests(TestCase):
         self.assertTrue(User.objects.filter(username='119_Headcoachthree').exists())
         self.assertTrue(User.objects.filter(username='120_Headcoachfour').exists())
         self.assertTrue(User.objects.filter(username='121_Headcoachone').exists())
-        self.assertTrue(User.objects.filter(username='045_Coachone').exists())
-        self.assertTrue(User.objects.filter(username='034_Coachtwo').exists())
-        self.assertTrue(User.objects.filter(username='088_Coachthree').exists())
-        self.assertTrue(User.objects.filter(username='013_Coachfour').exists())
+        self.assertTrue(User.objects.filter(username='008_Coachone').exists())
+        self.assertTrue(User.objects.filter(username='013_Coachtwo').exists())
+        self.assertTrue(User.objects.filter(username='048_Coachthree').exists())
+        self.assertTrue(User.objects.filter(username='088_Coachtfour').exists())
         self.assertTrue(User.objects.filter(username='000_Athlete1').exists())
         for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
             self.assertTrue(User.objects.filter(username=username, primary_coach__isnull=True).exists())
