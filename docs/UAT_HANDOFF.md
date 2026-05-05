@@ -165,6 +165,19 @@ http://115-weightlifting.local:4173/head
 
 Later, a reverse proxy could remove the `:4173` port and provide a cleaner URL. That would be a UAT 3.0-level polish task because it likely touches Docker Compose, frontend origin config, backend allowed hosts/origins, and documentation.
 
+## UAT 3.0 MVP Direction
+
+UAT 3.0 starts the role-specific UX shell:
+
+- GMHC: god-tier organization dashboard, full roster metrics, compliance visibility, schedule ownership, and settings foundation.
+- AGMHC: assigned-team dashboard only, with access to assigned line coaches and athletes.
+- LC: assigned-athlete programming and management only.
+- Settings priority 1: account profile, protected username prefix messaging, email/phone, athlete card demographics, privacy note, role-aware controls, and coach certification tracking.
+- Schedule priority 2: spreadsheet-first coach coverage view with daily, weekly, and monthly outlook placeholders.
+- Simple/Complex priority 3: persisted UX mode toggle so the interface can reduce visual density for users who want a quieter workflow.
+
+UAT 4.0 idea capture lives in `docs/UAT_4_ROLLING_NOTES.md`.
+
 ## Pre-Sleep Validation Checklist
 
 Before ending this UAT 1.0 phase, run:

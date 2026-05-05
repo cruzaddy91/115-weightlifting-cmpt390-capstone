@@ -102,6 +102,43 @@ const HEAD_CATEGORY_LINKS = [
     to: '/head/categories/004',
   },
 ]
+const AGM_PREFIXES = new Set(['001', '002', '003', '004'])
+const SCHEDULE_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const CERTIFICATION_TYPES = ['CPR/AED', 'USAW', 'ACPT/NCCA', 'Open gym/class safety']
+
+const prefixForUsername = (username = '') => username.split('_', 1)[0] || ''
+
+const accessMetaForUser = (user) => {
+  const prefix = prefixForUsername(user?.username)
+  if (prefix === '117') {
+    return {
+      key: 'gmhc',
+      coachTab: 'GM Head Coach',
+      shortLabel: 'GMHC',
+      title: 'GM Head Coach command center',
+      scope: 'God-tier organization access',
+      description: 'Full active roster, AGMHC lanes, line coaches, athletes, compliance visibility, schedule oversight, and global settings.',
+    }
+  }
+  if (AGM_PREFIXES.has(prefix)) {
+    return {
+      key: 'agmhc',
+      coachTab: 'AGM Head Coach',
+      shortLabel: 'AGMHC',
+      title: 'AGM Head Coach team dashboard',
+      scope: 'Assigned-team access',
+      description: 'Only the line coaches, athletes, compliance dates, and metrics assigned to this AGMHC lane.',
+    }
+  }
+  return {
+    key: 'head',
+    coachTab: 'Head Coach',
+    shortLabel: 'HC',
+    title: 'Head Coach dashboard',
+    scope: 'Direct-report access',
+    description: 'Only direct staff and athlete data attached to this head-coach account.',
+  }
+}
 
 const HeadCoachDashboard = () => {
   const [rows, setRows] = useState([])
@@ -121,6 +158,7 @@ const HeadCoachDashboard = () => {
   const [staffTargetId, setStaffTargetId] = useState('')
   const [athleteReassignId, setAthleteReassignId] = useState(null)
   const [athleteTargetId, setAthleteTargetId] = useState('')
+  const [activeWorkspace, setActiveWorkspace] = useState('head')
   const [analytics, setAnalytics] = useState({
     styleGroups: [],
     nameGroups: [],
@@ -136,14 +174,22 @@ const HeadCoachDashboard = () => {
 
   const headUser = getCurrentUser()
   const headId = headUser?.id
+  const accessMeta = useMemo(() => accessMetaForUser(headUser), [headUser])
+  const isGmHeadUser = accessMeta.key === 'gmhc'
+  const workspaceTabs = useMemo(() => [
+    { key: 'head', label: accessMeta.coachTab },
+    { key: 'line', label: 'Line Coach' },
+    { key: 'schedule', label: 'Schedule' },
+    { key: 'settings', label: 'Settings' },
+  ], [accessMeta.coachTab])
   const selectedHeadCategory = useMemo(
     () => HEAD_CATEGORY_LINKS.find((category) => category.prefix === activeHeadCategory) || HEAD_CATEGORY_LINKS[0],
     [activeHeadCategory]
   )
   const summaryTotals = useMemo(() => {
     const totals = {
-      coaches: rows.length,
-      athletes: 0,
+      coaches: isGmHeadUser ? roster.headCoaches.length + roster.staff.length : rows.length,
+      athletes: isGmHeadUser ? roster.athletes.length : 0,
       programs: 0,
       prs: 0,
       workoutLogs: 0,
@@ -151,13 +197,31 @@ const HeadCoachDashboard = () => {
       recommendationCount: SHOW_HEAD_ANALYTICS ? analytics.recommendations.length : 0,
     }
     for (const row of rows) {
-      totals.athletes += Number(row.athlete_count || 0)
+      if (!isGmHeadUser) totals.athletes += Number(row.athlete_count || 0)
       totals.programs += Number(row.program_count || 0)
       totals.prs += Number(row.personal_record_count || 0)
       totals.workoutLogs += Number(row.workout_log_count || 0)
     }
     return totals
-  }, [rows, analytics.styleGroups.length, analytics.recommendations.length])
+  }, [isGmHeadUser, roster.athletes.length, roster.headCoaches.length, roster.staff.length, rows, analytics.styleGroups.length, analytics.recommendations.length])
+
+  const scheduleCoachNames = useMemo(() => {
+    const names = [...roster.headCoaches, ...roster.staff]
+      .map((person) => person.username)
+      .filter(Boolean)
+    return names.length ? names : [headUser?.username || 'Coach']
+  }, [headUser?.username, roster.headCoaches, roster.staff])
+
+  const certificationRows = useMemo(() => {
+    const visibleCoaches = isGmHeadUser ? [...roster.headCoaches, ...roster.staff] : roster.staff
+    const coaches = visibleCoaches.length ? visibleCoaches : [headUser].filter(Boolean)
+    return coaches.map((coach) => ({
+      id: coach.id || coach.username,
+      username: coach.username,
+      role: coach.user_type === 'head_coach' ? 'Head coach' : 'Line coach',
+      scope: isGmHeadUser ? 'GMHC visible' : 'Team visible',
+    }))
+  }, [headUser, isGmHeadUser, roster.headCoaches, roster.staff])
 
   const topRecommendation = analytics.recommendations[0] || null
 
@@ -311,9 +375,15 @@ const HeadCoachDashboard = () => {
       return !row || !validLineCoachHeadUsernames.has(row.reports_to_username)
     })
     const athlete = athleteByUsername.get(EXPECTED_PRIMARY_ATHLETE)
-    const invalidUnassignedAthletes = EXPECTED_UNASSIGNED_ATHLETES.filter((username) => {
+    const validAthleteCoachIds = new Set([
+      ...roster.headCoaches.map((h) => h.id),
+      ...roster.staff.map((s) => s.id),
+    ])
+    const invalidUatAthletes = EXPECTED_UNASSIGNED_ATHLETES.filter((username) => {
       const row = athleteByUsername.get(username)
-      return !row || row.primary_coach_id !== null || row.org_label !== 'XXX_UNASSIGNED'
+      if (!row) return true
+      if (row.primary_coach_id === null) return row.org_label !== 'XXX_UNASSIGNED'
+      return !validAthleteCoachIds.has(row.primary_coach_id)
     })
 
     if (missingHeads.length > 0) {
@@ -336,8 +406,8 @@ const HeadCoachDashboard = () => {
       window.alert(`Error: ${EXPECTED_PRIMARY_ATHLETE} is not assigned to @${EXPECTED_PRIMARY_COACH}`)
       return
     }
-    if (invalidUnassignedAthletes.length > 0) {
-      window.alert(`Error: expected these athletes to be XXX_UNASSIGNED: ${invalidUnassignedAthletes.join(', ')}`)
+    if (invalidUatAthletes.length > 0) {
+      window.alert(`Error: expected these UAT athletes to be XXX_UNASSIGNED or assigned to an active coach/head coach: ${invalidUatAthletes.join(', ')}`)
       return
     }
     window.alert('Good to go! Head coaches, line coaches, category tags, athlete assignment, and unassigned athlete pool are provisioned.')
@@ -494,16 +564,41 @@ const HeadCoachDashboard = () => {
       <header className="dashboard-header head-dashboard-header">
         <div>
           <div className="dashboard-kicker-row">
-            <span className="dashboard-kicker">Head Coach</span>
+            <span className="dashboard-kicker">{accessMeta.shortLabel}</span>
             <Link to="/coach" className="head-dashboard-link-coach">Open coach workspace</Link>
           </div>
-          <h1>Organization overview</h1>
+          <h1>{accessMeta.title}</h1>
           <p className="dashboard-description head-dashboard-lede">
-            Org-wide roster health, program outcomes, and model-guided training signals in one executive view.
+            {accessMeta.description}
           </p>
         </div>
       </header>
 
+      <section className="head-workspace-shell section-card" aria-label="UAT 3.0 role workspaces">
+        <div>
+          <span className="head-access-label">{accessMeta.scope}</span>
+          <p>
+            MVP-first UAT 3.0 shell: head-coach view, line-coach context, schedule, settings, and the global Light/Dark plus Simple/Complex controls.
+          </p>
+        </div>
+        <div className="head-workspace-tabs" role="tablist" aria-label="Head dashboard workspaces">
+          {workspaceTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`head-workspace-tab ${activeWorkspace === tab.key ? 'active' : ''}`}
+              role="tab"
+              aria-selected={activeWorkspace === tab.key}
+              onClick={() => setActiveWorkspace(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {activeWorkspace === 'head' && (
+      <>
       <section className="summary-grid head-summary-grid" aria-label="Head coach summary metrics">
         <article className="home-metric section-card">
           <span className="label">Coaches in org</span>
@@ -1075,6 +1170,113 @@ const HeadCoachDashboard = () => {
           </>
         )}
       </section>
+      </>
+      )}
+
+      {activeWorkspace === 'line' && (
+        <section className="head-uat-panel section-card" aria-labelledby="line-coach-workspace-heading">
+          <div className="head-panel-heading">
+            <span className="head-access-label">LC workspace</span>
+            <h2 id="line-coach-workspace-heading">Line coach view</h2>
+          </div>
+          <p>
+            Line coaches keep the narrowest data wall: their assigned athletes, assigned programs, PRs, workout logs, and their own account/certification details.
+          </p>
+          <div className="head-mvp-grid">
+            <article className="head-mvp-card">
+              <h3>Current MVP link</h3>
+              <p>Use the existing coach workspace for programming and athlete execution tools.</p>
+              <Link to="/coach" className="head-dashboard-link-coach">Open line-coach workspace</Link>
+            </article>
+            <article className="head-mvp-card">
+              <h3>Access wall</h3>
+              <p>GMHC may see all LC data. AGMHC sees only assigned LCs. LC sees only their own athlete tree.</p>
+            </article>
+          </div>
+        </section>
+      )}
+
+      {activeWorkspace === 'schedule' && (
+        <section className="head-uat-panel section-card" aria-labelledby="schedule-workspace-heading">
+          <div className="head-panel-heading">
+            <span className="head-access-label">Priority 2</span>
+            <h2 id="schedule-workspace-heading">Schedule</h2>
+          </div>
+          <p>
+            Spreadsheet-first staff coverage view. GMHC owns edits in MVP; AGMHC and LC users begin with read-only schedule visibility unless GMHC delegates access later.
+          </p>
+          <div className="head-schedule-tools">
+            <button type="button" className="head-btn-secondary">Daily outlook</button>
+            <button type="button" className="head-btn-secondary">Weekly outlook</button>
+            <button type="button" className="head-btn-secondary">Monthly outlook</button>
+          </div>
+          <div className="head-schedule-grid" role="table" aria-label="MVP weekly coach schedule">
+            {SCHEDULE_DAYS.map((day, idx) => (
+              <article className="head-schedule-day" key={day} role="row">
+                <strong>{day}</strong>
+                <span>{scheduleCoachNames[idx % scheduleCoachNames.length]}</span>
+                <small>{isGmHeadUser ? 'GM editable placeholder' : 'Read-only placeholder'}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {activeWorkspace === 'settings' && (
+        <section className="head-uat-panel section-card" aria-labelledby="settings-workspace-heading">
+          <div className="head-panel-heading">
+            <span className="head-access-label">Priority 1</span>
+            <h2 id="settings-workspace-heading">Settings</h2>
+          </div>
+          <p>
+            Settings are role-aware. GMHC gets organization-level controls, AGMHC gets assigned-team controls, LC gets self and athlete-management tools, and athletes keep account/profile controls.
+          </p>
+          <div className="head-mvp-grid">
+            <article className="head-mvp-card">
+              <h3>Account profile</h3>
+              <ul>
+                <li>Display name and username suffix edits, with the protected <span className="data">@###_</span> prefix called out.</li>
+                <li>Email verification/change and phone number fields.</li>
+                <li>Athlete card: DOB/age, gender, bodyweight, and opt-in privacy note for model quality.</li>
+              </ul>
+            </article>
+            <article className="head-mvp-card">
+              <h3>Access controls</h3>
+              <ul>
+                <li>GMHC: global org, settings, compliance, schedule, and delegation controls.</li>
+                <li>AGMHC: assigned coaches and athletes only, plus delegated tools.</li>
+                <li>LC: own profile, certifications, and assigned athlete management only.</li>
+              </ul>
+            </article>
+          </div>
+          <div className="head-assign-card">
+            <h3>Coach certifications</h3>
+            <p className="head-assign-lede">
+              MVP compliance tracker for CPR/AED, USAW, ACPT/NCCA or equivalent nationally accredited personal-training certificates, and gym/class safety requirements.
+            </p>
+            <table className="head-table head-cert-table">
+              <thead>
+                <tr>
+                  <th>Coach</th>
+                  <th>Role</th>
+                  <th>Visibility</th>
+                  {CERTIFICATION_TYPES.map((cert) => <th key={cert}>{cert}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {certificationRows.map((coach) => (
+                  <tr key={coach.id}>
+                    <td><span className="username-highlight">@{coach.username}</span></td>
+                    <td>{coach.role}</td>
+                    <td>{coach.scope}</td>
+                    {CERTIFICATION_TYPES.map((cert) => <td key={cert}>Date needed</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

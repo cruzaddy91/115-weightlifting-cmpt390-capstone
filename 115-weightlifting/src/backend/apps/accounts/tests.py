@@ -585,6 +585,39 @@ class HeadOrgSummaryTests(TestCase):
         self.assertEqual(by_user['head_org']['athlete_count'], 1)
         self.assertEqual(by_user['line_org']['athlete_count'], 1)
 
+    def test_master_head_summary_includes_all_active_head_and_line_coaches(self):
+        master = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        agm = User.objects.create_user(
+            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        line_under_agm = User.objects.create_user(
+            username='005_Lineagm', password='longenoughpw1', user_type='coach',
+        )
+        line_under_agm.reports_to = agm
+        line_under_agm.save(update_fields=['reports_to'])
+        line_under_gm = User.objects.create_user(
+            username='006_Linegm', password='longenoughpw1', user_type='coach',
+        )
+        line_under_gm.reports_to = master
+        line_under_gm.save(update_fields=['reports_to'])
+        athlete = User.objects.create_user(
+            username='007_Athleteagm', password='longenoughpw1', user_type='athlete',
+        )
+        athlete.primary_coach = line_under_agm
+        athlete.save(update_fields=['primary_coach'])
+
+        self.client.force_authenticate(user=master)
+        r = self.client.get(reverse('head-org-summary'))
+        self.assertEqual(r.status_code, 200)
+        by_user = {row['username']: row for row in r.json()['coaches']}
+        self.assertIn('117_HeadcoachGM', by_user)
+        self.assertIn('001_Headcoachone', by_user)
+        self.assertIn('005_Lineagm', by_user)
+        self.assertIn('006_Linegm', by_user)
+        self.assertEqual(by_user['005_Lineagm']['athlete_count'], 1)
+
 
 class HeadRosterAssignmentTests(TestCase):
     def setUp(self):

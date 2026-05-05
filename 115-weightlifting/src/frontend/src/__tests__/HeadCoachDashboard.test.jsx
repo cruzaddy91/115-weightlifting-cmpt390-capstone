@@ -1,13 +1,16 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import HeadCoachDashboard from '../pages/HeadCoachDashboard'
 
 vi.mock('../utils/auth', () => ({
-  getCurrentUser: () => ({ id: 1, username: 'head', user_type: 'head_coach' }),
+  getCurrentUser: () => ({ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach' }),
 }))
 
 vi.mock('../services/api', () => ({
+  deleteHeadAthlete: vi.fn(),
+  deleteHeadCoach: vi.fn(),
+  deleteHeadStaff: vi.fn(),
   getHeadOrgSummary: vi.fn(),
   getHeadOrgRoster: vi.fn(),
   getHeadModelStatus: vi.fn(),
@@ -15,7 +18,8 @@ vi.mock('../services/api', () => ({
   getHeadProgramNameOutcomes: vi.fn(),
   getHeadRecommendations: vi.fn(),
   patchHeadAthletePrimaryCoach: vi.fn(),
-  patchHeadStaffLink: vi.fn(),
+  patchHeadCoachCategory: vi.fn(),
+  patchHeadStaffAssignment: vi.fn(),
   postHeadStaffInvite: vi.fn(),
 }))
 
@@ -28,11 +32,15 @@ import {
   getHeadRecommendations,
 } from '../services/api'
 
-describe('HeadCoachDashboard analytics', () => {
+describe('HeadCoachDashboard UAT 3 shell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    getHeadOrgSummary.mockResolvedValue({ coaches: [] })
-    getHeadOrgRoster.mockResolvedValue({ staff: [], athletes: [] })
+    getHeadOrgSummary.mockResolvedValue({ coaches: [{ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', athlete_count: 1, program_count: 1, personal_record_count: 1, workout_log_count: 1 }] })
+    getHeadOrgRoster.mockResolvedValue({
+      head_coaches: [{ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', org_prefix: '117' }],
+      staff: [{ id: 2, username: '045_Coachone', user_type: 'coach', reports_to_id: 1, reports_to_username: '117_HeadcoachGM' }],
+      athletes: [{ id: 3, username: '000_Athlete1', primary_coach_id: 2, primary_coach_username: '045_Coachone', org_label: '117_MASTER_CHIEF' }],
+    })
     getHeadModelStatus.mockResolvedValue({
       mode: 'model',
       has_model_artifact: true,
@@ -70,19 +78,32 @@ describe('HeadCoachDashboard analytics', () => {
     })
   })
 
-  it('renders analytics tables and recommendation cards', async () => {
+  it('renders role-aware workspace tabs', async () => {
     render(
       <MemoryRouter>
         <HeadCoachDashboard />
       </MemoryRouter>,
     )
-    expect(await screen.findByRole('heading', { name: /De-identified analytics/i })).toBeTruthy()
-    expect(screen.getByText(/Program style outcomes/i)).toBeTruthy()
-    expect(screen.getByText(/peak strength/i)).toBeTruthy()
-    expect(screen.getByText(/Segment recommendations/i)).toBeTruthy()
-    expect(screen.getByText(/Engine mode/i)).toBeTruthy()
-    expect(screen.getAllByText(/^MODEL$/i).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/style:strength/i).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: /GM Head Coach command center/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /GM Head Coach/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /Line Coach/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /Schedule/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /Settings/i })).toBeTruthy()
+  })
+
+  it('opens settings and schedule MVP panels', async () => {
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /Settings/i }))
+    expect(screen.getByRole('heading', { name: /Settings/i })).toBeTruthy()
+    expect(screen.getByText(/Coach certifications/i)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('tab', { name: /Schedule/i }))
+    expect(screen.getByRole('heading', { name: /Schedule/i })).toBeTruthy()
+    expect(screen.getByText(/Weekly outlook/i)).toBeTruthy()
   })
 })
 

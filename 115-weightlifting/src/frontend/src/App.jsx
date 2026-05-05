@@ -12,6 +12,7 @@ import { countExercises, normalizeProgramData } from './utils/dataStructure'
 import { athleteProfileSuffix } from './utils/athleteMeta'
 import { relativeTimeSince } from './utils/relativeTime'
 import { applyTheme, resolveInitialTheme, toggleTheme } from './utils/theme'
+import { applyUxMode, resolveInitialUxMode, toggleUxMode } from './utils/uxMode'
 import './App.css'
 
 /** Human-readable role for nav / status (API still uses snake_case `user_type`). */
@@ -20,6 +21,18 @@ const roleDisplayLabel = (userType) => {
   if (userType === 'coach') return 'Coach'
   if (userType === 'athlete') return 'Athlete'
   return userType || ''
+}
+
+const navRoleDisplayLabel = (user) => {
+  if (user?.user_type === 'head_coach') {
+    const prefix = (user.username || '').split('_', 1)[0]
+    if (prefix === '117') return 'GMHC'
+    if (['001', '002', '003', '004'].includes(prefix)) return 'AGMHC'
+    return 'Head Coach'
+  }
+  if (user?.user_type === 'coach') return 'LC'
+  if (user?.user_type === 'athlete') return 'Athlete'
+  return roleDisplayLabel(user?.user_type)
 }
 
 const defaultRouteForUserType = (userType) => {
@@ -78,11 +91,13 @@ const Navigation = () => {
   const location = useLocation()
   const currentUser = getCurrentUser()
   const [theme, setThemeState] = useState(resolveInitialTheme)
+  const [uxMode, setUxModeState] = useState(resolveInitialUxMode)
 
   // Apply on mount (covers first visit -- index.css defaults to dark until
   // this runs, so light-preference users see a one-frame flicker; acceptable
   // trade for keeping the toggle state in React instead of an inline script).
   useEffect(() => { applyTheme(theme) }, [theme])
+  useEffect(() => { applyUxMode(uxMode) }, [uxMode])
 
   // Hard reload on logout. SPA-style navigate('/login', replace) used to
   // trigger a render loop between /athlete's ProtectedRoute (Navigate to
@@ -101,6 +116,10 @@ const Navigation = () => {
     setThemeState(toggleTheme(theme))
   }
 
+  const handleUxModeToggle = () => {
+    setUxModeState(toggleUxMode(uxMode))
+  }
+
   return (
     <nav className="main-nav">
       <div className="nav-container">
@@ -109,10 +128,10 @@ const Navigation = () => {
           <div className="nav-links">
             {!currentUser && <Link to="/login" className={location.pathname === '/login' ? 'active' : ''}>Log in</Link>}
             {currentUser?.user_type === 'head_coach' && (
-              <Link to="/head" className={location.pathname.startsWith('/head') ? 'active' : ''}>Head</Link>
+              <Link to="/head" className={location.pathname.startsWith('/head') ? 'active' : ''}>{navRoleDisplayLabel(currentUser)}</Link>
             )}
             {(currentUser?.user_type === 'coach' || currentUser?.user_type === 'head_coach') && (
-              <Link to="/coach" className={location.pathname === '/coach' ? 'active' : ''}>Coach</Link>
+              <Link to="/coach" className={location.pathname === '/coach' ? 'active' : ''}>Line Coach</Link>
             )}
             {currentUser?.user_type === 'athlete' && (
               <Link to="/athlete" className={location.pathname === '/athlete' ? 'active' : ''}>Athlete</Link>
@@ -127,10 +146,19 @@ const Navigation = () => {
           >
             {theme === 'light' ? 'Dark' : 'Light'}
           </button>
+          <button
+            type="button"
+            className="nav-button nav-ux-toggle"
+            onClick={handleUxModeToggle}
+            aria-label={uxMode === 'simple' ? 'Switch to complex mode' : 'Switch to simple mode'}
+            title={uxMode === 'simple' ? 'Switch to complex mode' : 'Switch to simple mode'}
+          >
+            {uxMode === 'simple' ? 'Complex' : 'Simple'}
+          </button>
           {currentUser && (
             <>
               <span className="nav-user">
-                <span className="username-highlight">{currentUser.username}</span> · {roleDisplayLabel(currentUser.user_type)}
+                <span className="username-highlight">{currentUser.username}</span> · {navRoleDisplayLabel(currentUser)}
                 {currentUser.user_type === 'athlete' && athleteProfileSuffix(currentUser) ? (
                   <span className="athlete-inline-meta nav-user-athlete-meta">{athleteProfileSuffix(currentUser)}</span>
                 ) : null}

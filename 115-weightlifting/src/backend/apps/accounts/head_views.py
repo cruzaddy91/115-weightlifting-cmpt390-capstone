@@ -30,6 +30,21 @@ def _org_coach_ids(head):
     return [head.id, *list(staff_coach_queryset(head).values_list('pk', flat=True))]
 
 
+def _summary_row(coach, athlete_ids):
+    athlete_set = set(athlete_ids)
+    pr_qs = PersonalRecord.objects.filter(athlete_id__in=athlete_ids) if athlete_ids else PersonalRecord.objects.none()
+    wl_qs = WorkoutLog.objects.filter(athlete_id__in=athlete_ids) if athlete_ids else WorkoutLog.objects.none()
+    return {
+        'id': coach.id,
+        'username': coach.username,
+        'user_type': coach.user_type,
+        'athlete_count': len(athlete_set),
+        'program_count': TrainingProgram.objects.filter(coach=coach, athlete__is_active=True).count(),
+        'personal_record_count': pr_qs.count(),
+        'workout_log_count': wl_qs.count(),
+    }
+
+
 def _is_master_head(user):
     return is_master_head_user(user)
 
@@ -68,27 +83,20 @@ class HeadOrgSummaryView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         head = request.user
-        coaches = [head, *list(staff_coach_queryset(head).order_by('username'))]
+        if _is_master_head(head):
+            coaches = list(
+                User.objects.filter(user_type__in=('head_coach', 'coach'), is_active=True, is_staff=False, is_superuser=False)
+                .order_by('user_type', 'username')
+            )
+        else:
+            coaches = [head, *list(staff_coach_queryset(head).order_by('username'))]
         out = []
         for coach in coaches:
             # Roster = athletes whose accountable coach is this user (line or head), not program joins alone.
             athlete_ids = list(
                 User.objects.filter(user_type='athlete', is_active=True, primary_coach=coach).values_list('pk', flat=True)
             )
-            athlete_set = set(athlete_ids)
-            pr_qs = PersonalRecord.objects.filter(athlete_id__in=athlete_ids) if athlete_ids else PersonalRecord.objects.none()
-            wl_qs = WorkoutLog.objects.filter(athlete_id__in=athlete_ids) if athlete_ids else WorkoutLog.objects.none()
-            out.append(
-                {
-                    'id': coach.id,
-                    'username': coach.username,
-                    'user_type': coach.user_type,
-                    'athlete_count': len(athlete_set),
-                    'program_count': TrainingProgram.objects.filter(coach=coach, athlete__is_active=True).count(),
-                    'personal_record_count': pr_qs.count(),
-                    'workout_log_count': wl_qs.count(),
-                }
-            )
+            out.append(_summary_row(coach, athlete_ids))
         return Response({'coaches': out}, status=status.HTTP_200_OK)
 
 
