@@ -233,9 +233,26 @@ const HeadCoachDashboard = () => {
 
   const coachOptions = () => {
     if (!headId) return []
-    const opts = [{ id: headId, label: `@${headUser?.username || 'you'} (head)` }]
+    const isGm = (headUser?.username || '').startsWith('117_')
+    const opts = []
+    const seen = new Set()
+    const addOption = (id, label) => {
+      if (id == null || seen.has(id)) return
+      seen.add(id)
+      opts.push({ id, label })
+    }
+    addOption(headId, `@${headUser?.username || 'you'} (head)`)
+    if (isGm) {
+      roster.headCoaches
+        .filter((h) => h.id !== headId && h.org_prefix !== '117')
+        .forEach((h) => addOption(h.id, `@${h.username} (head)`))
+      roster.staff.forEach((s) => {
+        addOption(s.id, `@${s.username} (line)`)
+      })
+      return opts
+    }
     roster.staff.filter((s) => s.reports_to_id === headId).forEach((s) => {
-      opts.push({ id: s.id, label: `@${s.username} (line)` })
+      addOption(s.id, `@${s.username} (line)`)
     })
     return opts
   }

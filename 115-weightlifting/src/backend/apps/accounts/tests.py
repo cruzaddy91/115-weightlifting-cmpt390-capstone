@@ -1001,7 +1001,7 @@ class HeadRosterAssignmentTests(TestCase):
         self.assertTrue(self.ath.is_active)
         self.assertEqual(prog.coach_id, self.head.id)
 
-    def test_head_can_unassign_active_athlete_outside_org(self):
+    def test_non_master_head_cannot_unassign_active_athlete_outside_org(self):
         other_head = User.objects.create_user(
             username='outside_head_unassign', password='longenoughpw1', user_type='head_coach',
         )
@@ -1017,9 +1017,9 @@ class HeadRosterAssignmentTests(TestCase):
             {'primary_coach_id': None},
             format='json',
         )
-        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, 403)
         outside.refresh_from_db()
-        self.assertIsNone(outside.primary_coach_id)
+        self.assertEqual(outside.primary_coach_id, other_head.id)
 
     def test_master_head_can_reassign_active_athlete_outside_org(self):
         master = User.objects.create_user(
@@ -1047,6 +1047,95 @@ class HeadRosterAssignmentTests(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         outside.refresh_from_db()
         self.assertEqual(outside.primary_coach_id, master.id)
+
+    def test_master_head_can_assign_athlete_to_agm_head(self):
+        master = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        agm = User.objects.create_user(
+            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        athlete = User.objects.create_user(
+            username='021_agm_target', password='longenoughpw1', user_type='athlete',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': athlete.id}),
+            {'primary_coach_id': agm.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.primary_coach_id, agm.id)
+
+    def test_master_head_can_assign_athlete_to_line_coach_under_gm(self):
+        master = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        line = User.objects.create_user(
+            username='022_linegm', password='longenoughpw1', user_type='coach',
+        )
+        line.reports_to = master
+        line.save(update_fields=['reports_to'])
+        athlete = User.objects.create_user(
+            username='023_linegm_target', password='longenoughpw1', user_type='athlete',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': athlete.id}),
+            {'primary_coach_id': line.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.primary_coach_id, line.id)
+
+    def test_master_head_can_assign_athlete_to_line_coach_under_agm(self):
+        master = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        agm = User.objects.create_user(
+            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        line = User.objects.create_user(
+            username='024_lineagm', password='longenoughpw1', user_type='coach',
+        )
+        line.reports_to = agm
+        line.save(update_fields=['reports_to'])
+        athlete = User.objects.create_user(
+            username='025_lineagm_target', password='longenoughpw1', user_type='athlete',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': athlete.id}),
+            {'primary_coach_id': line.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.primary_coach_id, line.id)
+
+    def test_master_head_can_unassign_active_athlete_outside_org(self):
+        master = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        outside_head = User.objects.create_user(
+            username='outside_head_master_unassign', password='longenoughpw1', user_type='head_coach',
+        )
+        outside = User.objects.create_user(
+            username='outside_ath_master_unassign', password='longenoughpw1', user_type='athlete',
+        )
+        outside.primary_coach = outside_head
+        outside.save(update_fields=['primary_coach'])
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': outside.id}),
+            {'primary_coach_id': None},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        outside.refresh_from_db()
+        self.assertIsNone(outside.primary_coach_id)
 
     def test_delete_athlete_soft_deletes_with_30_day_recovery_window(self):
         from datetime import date

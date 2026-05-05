@@ -432,6 +432,14 @@ class HeadAthletePrimaryCoachView(APIView):
         athlete = get_object_or_404(User, pk=user_id, user_type='athlete', is_active=True)
         coach_id = request.data.get('primary_coach_id')
         unassign_requested = coach_id is None or coach_id == ''
+        master_head = _is_master_head(head)
+        allowed = set(_org_coach_ids(head))
+        prev = athlete.primary_coach_id
+        if prev is not None and prev not in allowed and not master_head:
+            return Response(
+                {'detail': 'Athlete is assigned outside your organization.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if not unassign_requested:
             try:
                 coach_id = int(coach_id)
@@ -467,7 +475,6 @@ class HeadAthletePrimaryCoachView(APIView):
                 {'primary_coach_id': ['Target must be a coach or head coach.']},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        master_head = _is_master_head(head)
         if coach.user_type == 'head_coach' and coach.id != head.id and not master_head:
             return Response(
                 {'primary_coach_id': ['Athletes may only report to your account as head coach.']},
@@ -479,17 +486,10 @@ class HeadAthletePrimaryCoachView(APIView):
                     {'primary_coach_id': ['Line coach must report to you before they can own an athlete.']},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        allowed = set(_org_coach_ids(head))
         if coach.id not in allowed and not master_head:
             return Response(
                 {'primary_coach_id': ['Coach is not in your organization.']},
                 status=status.HTTP_400_BAD_REQUEST,
-            )
-        prev = athlete.primary_coach_id
-        if prev is not None and prev not in allowed and not master_head:
-            return Response(
-                {'detail': 'Athlete is assigned outside your organization.'},
-                status=status.HTTP_403_FORBIDDEN,
             )
         with transaction.atomic():
             athlete.primary_coach = coach

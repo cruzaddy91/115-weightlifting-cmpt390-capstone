@@ -147,6 +147,24 @@ This enables dashboards to compare:
 
 This is high-value for future analytics and program recommendation work.
 
+## UAT 3.0 Nice-To-Have: Local Domain
+
+Preserve this as a future polish item, not a UAT 2.0 blocker.
+
+For local demos, the current Docker frontend can be reached with a friendlier hostname by adding this to `/etc/hosts`:
+
+```txt
+127.0.0.1  115-weightlifting.local
+```
+
+Then open:
+
+```txt
+http://115-weightlifting.local:4173/head
+```
+
+Later, a reverse proxy could remove the `:4173` port and provide a cleaner URL. That would be a UAT 3.0-level polish task because it likely touches Docker Compose, frontend origin config, backend allowed hosts/origins, and documentation.
+
 ## Pre-Sleep Validation Checklist
 
 Before ending this UAT 1.0 phase, run:

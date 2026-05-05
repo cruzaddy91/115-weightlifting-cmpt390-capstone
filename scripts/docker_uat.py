@@ -430,6 +430,10 @@ def main() -> int:
         )
         head_to_assign = next((row for row in roster_head_rows if row.get("username") == "121_Headcoachone"), None)
         head_to_delete = next((row for row in roster_head_rows if row.get("username") == "120_Headcoachfour"), None)
+        matrix_athlete = next((row for row in roster_athlete_rows if row.get("username") == batch_athletes[0]), None)
+        line_under_gm = next((row for row in roster_staff_rows if row.get("username") == SEEDED_COACH_USERNAME), None)
+        line_to_move_under_agm = next((row for row in roster_staff_rows if row.get("username") == staff_reassign_coach), None)
+        headcoach_id = seeded_users[MASTER_HEAD_USERNAME].get("id") if isinstance(seeded_users.get(MASTER_HEAD_USERNAME), dict) else None
         status, payload = client.request(
             "PATCH",
             f"/api/auth/head/head-coaches/{head_to_assign.get('id') if isinstance(head_to_assign, dict) else 'missing'}/",
@@ -446,6 +450,51 @@ def main() -> int:
             payload,
         )
         assigned_head_id = payload.get("id") if isinstance(payload, dict) else None
+        matrix_athlete_id = matrix_athlete.get("id") if isinstance(matrix_athlete, dict) else None
+        line_under_gm_id = line_under_gm.get("id") if isinstance(line_under_gm, dict) else None
+        line_to_move_under_agm_id = line_to_move_under_agm.get("id") if isinstance(line_to_move_under_agm, dict) else None
+        status, payload = client.request(
+            "PATCH",
+            f"/api/auth/head/athletes/{matrix_athlete_id if matrix_athlete_id is not None else 'missing'}/",
+            {"primary_coach_id": headcoach_id},
+            token=seeded_tokens[MASTER_HEAD_USERNAME]["access"],
+        )
+        expect_status(results, f"{MASTER_HEAD_USERNAME} can assign athlete directly to GM", status, 200, payload)
+        status, payload = client.request(
+            "PATCH",
+            f"/api/auth/head/athletes/{matrix_athlete_id if matrix_athlete_id is not None else 'missing'}/",
+            {"primary_coach_id": assigned_head_id},
+            token=seeded_tokens[MASTER_HEAD_USERNAME]["access"],
+        )
+        expect_status(results, f"{MASTER_HEAD_USERNAME} can assign athlete directly to AGM head coach", status, 200, payload)
+        status, payload = client.request(
+            "PATCH",
+            f"/api/auth/head/athletes/{matrix_athlete_id if matrix_athlete_id is not None else 'missing'}/",
+            {"primary_coach_id": line_under_gm_id},
+            token=seeded_tokens[MASTER_HEAD_USERNAME]["access"],
+        )
+        expect_status(results, f"{MASTER_HEAD_USERNAME} can assign athlete to line coach under GM", status, 200, payload)
+        status, payload = client.request(
+            "PATCH",
+            f"/api/auth/head/staff/{line_to_move_under_agm_id if line_to_move_under_agm_id is not None else 'missing'}/",
+            {"reports_to_id": assigned_head_id},
+            token=seeded_tokens[MASTER_HEAD_USERNAME]["access"],
+        )
+        expect_status(results, f"{MASTER_HEAD_USERNAME} can assign line coach under AGM for athlete matrix", status, 200, payload)
+        status, payload = client.request(
+            "PATCH",
+            f"/api/auth/head/athletes/{matrix_athlete_id if matrix_athlete_id is not None else 'missing'}/",
+            {"primary_coach_id": line_to_move_under_agm_id},
+            token=seeded_tokens[MASTER_HEAD_USERNAME]["access"],
+        )
+        expect_status(results, f"{MASTER_HEAD_USERNAME} can assign athlete to line coach under AGM", status, 200, payload)
+        status, payload = client.request(
+            "PATCH",
+            f"/api/auth/head/athletes/{matrix_athlete_id if matrix_athlete_id is not None else 'missing'}/",
+            {"primary_coach_id": None},
+            token=seeded_tokens[MASTER_HEAD_USERNAME]["access"],
+        )
+        expect_status(results, f"{MASTER_HEAD_USERNAME} can return matrix athlete to XXX_UNASSIGNED", status, 200, payload)
         status, payload = client.request(
             "PATCH",
             f"/api/auth/head/head-coaches/{assigned_head_id if assigned_head_id is not None else 'missing'}/",
@@ -492,7 +541,6 @@ def main() -> int:
         )
         expect_status(results, "archived jon_snow login is disabled", status, 401, payload)
 
-        headcoach_id = seeded_users[MASTER_HEAD_USERNAME].get("id") if isinstance(seeded_users.get(MASTER_HEAD_USERNAME), dict) else None
         staff_reassign_tokens = login(client, staff_reassign_coach, args.password)
         status, staff_reassign_me = client.request("GET", "/api/auth/me/", token=staff_reassign_tokens["access"])
         expect_status(results, "staff reassign coach /api/auth/me/", status, 200, staff_reassign_me)
