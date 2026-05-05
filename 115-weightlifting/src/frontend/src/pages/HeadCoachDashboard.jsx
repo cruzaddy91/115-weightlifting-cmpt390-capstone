@@ -148,7 +148,10 @@ const HeadCoachDashboard = () => {
   const [roster, setRoster] = useState({ staff: [], headCoaches: [], athletes: [] })
   const [rosterLoading, setRosterLoading] = useState(true)
   const [rosterError, setRosterError] = useState('')
-  const [activeHeadCategory, setActiveHeadCategory] = useState('117')
+  const [activeHeadCategory, setActiveHeadCategory] = useState(() => {
+    const currentPrefix = prefixForUsername(getCurrentUser()?.username)
+    return AGM_PREFIXES.has(currentPrefix) ? currentPrefix : '117'
+  })
   const [inviteUsername, setInviteUsername] = useState('')
   const [assignBusy, setAssignBusy] = useState(false)
   const [assignMessage, setAssignMessage] = useState('')
@@ -174,6 +177,7 @@ const HeadCoachDashboard = () => {
 
   const headUser = getCurrentUser()
   const headId = headUser?.id
+  const headUserPrefix = prefixForUsername(headUser?.username)
   const accessMeta = useMemo(() => accessMetaForUser(headUser), [headUser])
   const isGmHeadUser = accessMeta.key === 'gmhc'
   const workspaceTabs = useMemo(() => [
@@ -182,10 +186,38 @@ const HeadCoachDashboard = () => {
     { key: 'schedule', label: 'Schedule' },
     { key: 'settings', label: 'Settings' },
   ], [accessMeta.coachTab])
+  const visibleHeadCategoryLinks = useMemo(() => {
+    if (isGmHeadUser) return HEAD_CATEGORY_LINKS
+    if (AGM_PREFIXES.has(headUserPrefix)) {
+      return HEAD_CATEGORY_LINKS.filter((category) => category.prefix === headUserPrefix)
+    }
+    return HEAD_CATEGORY_LINKS.filter((category) => category.prefix === '117')
+  }, [headUserPrefix, isGmHeadUser])
   const selectedHeadCategory = useMemo(
-    () => HEAD_CATEGORY_LINKS.find((category) => category.prefix === activeHeadCategory) || HEAD_CATEGORY_LINKS[0],
-    [activeHeadCategory]
+    () => visibleHeadCategoryLinks.find((category) => category.prefix === activeHeadCategory) || visibleHeadCategoryLinks[0] || HEAD_CATEGORY_LINKS[0],
+    [activeHeadCategory, visibleHeadCategoryLinks]
   )
+  const selectedCategoryRoster = useMemo(() => {
+    const prefix = selectedHeadCategory.prefix
+    if (prefix === '117') {
+      return {
+        headCoaches: roster.headCoaches,
+        staff: roster.staff,
+        athletes: roster.athletes,
+      }
+    }
+    return {
+      headCoaches: roster.headCoaches.filter((h) => h.org_prefix === prefix),
+      staff: roster.staff.filter((s) => s.org_prefix === prefix),
+      athletes: roster.athletes.filter((a) => a.org_prefix === prefix),
+    }
+  }, [roster.athletes, roster.headCoaches, roster.staff, selectedHeadCategory.prefix])
+  const selectedCategoryLead = selectedCategoryRoster.headCoaches[0] || null
+  const selectedCategoryStatus = selectedHeadCategory.prefix === '117'
+    ? selectedHeadCategory.status
+    : selectedCategoryLead
+      ? `${selectedCategoryRoster.staff.length} line coach(es), ${selectedCategoryRoster.athletes.length} athlete(s)`
+      : 'No AGMHC assigned yet'
   const summaryTotals = useMemo(() => {
     const totals = {
       coaches: isGmHeadUser ? roster.headCoaches.length + roster.staff.length : rows.length,
@@ -294,6 +326,12 @@ const HeadCoachDashboard = () => {
       cancelled = true
     }
   }, [loadSummary, loadRoster])
+
+  useEffect(() => {
+    if (!visibleHeadCategoryLinks.some((category) => category.prefix === activeHeadCategory)) {
+      setActiveHeadCategory(visibleHeadCategoryLinks[0]?.prefix || '117')
+    }
+  }, [activeHeadCategory, visibleHeadCategoryLinks])
 
   const coachOptions = () => {
     if (!headId) return []
@@ -826,7 +864,7 @@ const HeadCoachDashboard = () => {
               <h3>Head coach categories</h3>
               <div className="head-file-cabinet">
                 <div className="head-file-tabs" role="tablist" aria-label="Head coach category files">
-                {HEAD_CATEGORY_LINKS.map((category) => (
+                {visibleHeadCategoryLinks.map((category) => (
                   <button
                     key={category.prefix}
                     type="button"
@@ -850,11 +888,13 @@ const HeadCoachDashboard = () => {
                       {selectedHeadCategory.label}
                     </span>
                     <span className="head-file-panel-title">
-                      {selectedHeadCategory.username === 'UNASSIGNED'
-                        ? selectedHeadCategory.username
-                        : `@${selectedHeadCategory.username}`}
+                      {selectedCategoryLead
+                        ? `@${selectedCategoryLead.username}`
+                        : selectedHeadCategory.username === 'UNASSIGNED'
+                          ? selectedHeadCategory.username
+                          : `@${selectedHeadCategory.username}`}
                     </span>
-                    <span className="head-file-panel-meta">{selectedHeadCategory.status}</span>
+                    <span className="head-file-panel-meta">{selectedCategoryStatus}</span>
                     {selectedHeadCategory.prefix === '117' && (
                       <button
                         type="button"
@@ -1159,9 +1199,110 @@ const HeadCoachDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="head-file-empty">
-                      <strong>{selectedHeadCategory.username}</strong>
-                      <span>No head coach, line coaches, or athletes are assigned to this category yet.</span>
+                    <div className="head-file-dashboard">
+                      {!selectedCategoryLead ? (
+                        <div className="head-file-empty">
+                          <strong>{selectedHeadCategory.label}</strong>
+                          <span>No AGMHC, line coaches, or athletes are assigned to this category yet.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="head-category-summary-grid">
+                            <article className="home-metric section-card">
+                              <span className="label">AGMHC</span>
+                              <span className="value data">1</span>
+                            </article>
+                            <article className="home-metric section-card">
+                              <span className="label">Line coaches</span>
+                              <span className="value data">{selectedCategoryRoster.staff.length}</span>
+                            </article>
+                            <article className="home-metric section-card">
+                              <span className="label">Athletes</span>
+                              <span className="value data">{selectedCategoryRoster.athletes.length}</span>
+                            </article>
+                          </div>
+
+                          <div className="head-assign-card">
+                            <h3>AGM Head Coach</h3>
+                            <table className="head-table head-head-table">
+                              <thead>
+                                <tr>
+                                  <th>Head coach</th>
+                                  <th>Category tag</th>
+                                  <th>Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedCategoryRoster.headCoaches.map((h) => (
+                                  <tr key={h.id}>
+                                    <td><span className="username-highlight">@{h.username}</span></td>
+                                    <td>{renderOrgBadge(h)}</td>
+                                    <td>AGM Head Coach</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="head-assign-card">
+                            <h3>Line coaches</h3>
+                            {selectedCategoryRoster.staff.length === 0 ? (
+                              <p className="head-assign-empty">No line coaches assigned to this category yet.</p>
+                            ) : (
+                              <table className="head-table head-roster-table">
+                                <thead>
+                                  <tr>
+                                    <th>Line coach</th>
+                                    <th>Accountable coach</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedCategoryRoster.staff.map((s) => (
+                                    <tr key={s.id}>
+                                      <td>
+                                        <span className="head-identity">
+                                          <span className="username-highlight">@{s.username}</span>
+                                          {renderOrgBadge(s)}
+                                        </span>
+                                      </td>
+                                      <td>{s.reports_to_username ? `@${s.reports_to_username}` : 'Unaffiliated'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+
+                          <div className="head-assign-card">
+                            <h3>Athletes</h3>
+                            {selectedCategoryRoster.athletes.length === 0 ? (
+                              <p className="head-assign-empty">No athletes assigned to this category yet.</p>
+                            ) : (
+                              <table className="head-table head-athlete-table">
+                                <thead>
+                                  <tr>
+                                    <th>Athlete</th>
+                                    <th>Accountable coach</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedCategoryRoster.athletes.map((a) => (
+                                    <tr key={a.id}>
+                                      <td>
+                                        <span className="head-identity">
+                                          <span className="username-highlight">@{a.username}</span>
+                                          {renderOrgBadge(a)}
+                                        </span>
+                                      </td>
+                                      <td>{a.primary_coach_username ? `@${a.primary_coach_username}` : 'Unaffiliated'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

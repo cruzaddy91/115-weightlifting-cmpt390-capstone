@@ -37,9 +37,18 @@ describe('HeadCoachDashboard UAT 3 shell', () => {
     vi.clearAllMocks()
     getHeadOrgSummary.mockResolvedValue({ coaches: [{ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', athlete_count: 1, program_count: 1, personal_record_count: 1, workout_log_count: 1 }] })
     getHeadOrgRoster.mockResolvedValue({
-      head_coaches: [{ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', org_prefix: '117' }],
-      staff: [{ id: 2, username: '008_Coachone', user_type: 'coach', reports_to_id: 1, reports_to_username: '117_HeadcoachGM' }],
-      athletes: [{ id: 3, username: '000_Athlete1', primary_coach_id: 2, primary_coach_username: '008_Coachone', org_label: '117_MASTER_CHIEF' }],
+      head_coaches: [
+        { id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
+        { id: 4, username: '001_Headcoachone', user_type: 'head_coach', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
+      ],
+      staff: [
+        { id: 2, username: '008_Coachone', user_type: 'coach', reports_to_id: 1, reports_to_username: '117_HeadcoachGM', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
+        { id: 5, username: '013_Coachtwo', user_type: 'coach', reports_to_id: 4, reports_to_username: '001_Headcoachone', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
+      ],
+      athletes: [
+        { id: 3, username: '000_Athlete1', primary_coach_id: 2, primary_coach_username: '008_Coachone', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
+        { id: 6, username: '009_Athlete5', primary_coach_id: 5, primary_coach_username: '013_Coachtwo', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
+      ],
     })
     getHeadModelStatus.mockResolvedValue({
       mode: 'model',
@@ -104,6 +113,18 @@ describe('HeadCoachDashboard UAT 3 shell', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Schedule/i }))
     expect(screen.getByRole('heading', { name: /Schedule/i })).toBeTruthy()
     expect(screen.getByText(/Weekly outlook/i)).toBeTruthy()
+  })
+
+  it('populates assigned AGM category tabs', async () => {
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /001_INFINITY/i }))
+    expect(screen.getAllByText(/@001_Headcoachone/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/@013_Coachtwo/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/@009_Athlete5/i).length).toBeGreaterThan(0)
   })
 })
 

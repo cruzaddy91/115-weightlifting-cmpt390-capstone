@@ -115,8 +115,16 @@ class HeadOrgRosterView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         head = request.user
+        master_head = _is_master_head(head)
+        staff_qs = User.objects.filter(user_type='coach', is_active=True, is_staff=False, is_superuser=False)
+        head_qs = User.objects.filter(user_type='head_coach', is_active=True, is_staff=False, is_superuser=False)
+        athlete_qs = User.objects.filter(user_type='athlete', is_active=True, is_staff=False, is_superuser=False)
+        if not master_head:
+            staff_qs = staff_qs.filter(reports_to=head)
+            head_qs = head_qs.filter(pk=head.pk)
+            athlete_qs = athlete_qs.filter(Q(primary_coach=head) | Q(primary_coach__reports_to=head))
         staff_users = list(
-            User.objects.filter(user_type='coach', is_active=True, is_staff=False, is_superuser=False)
+            staff_qs
             .select_related('reports_to')
             .order_by('username')
         )
@@ -130,10 +138,7 @@ class HeadOrgRosterView(APIView):
             }
             for coach in staff_users
         ]
-        head_users = list(
-            User.objects.filter(user_type='head_coach', is_active=True, is_staff=False, is_superuser=False)
-            .order_by('username')
-        )
+        head_users = list(head_qs.order_by('username'))
         head_coaches = [
             {
                 'id': head_coach.id,
@@ -143,7 +148,7 @@ class HeadOrgRosterView(APIView):
             for head_coach in head_users
         ]
         athlete_users = list(
-            User.objects.filter(user_type='athlete', is_active=True, is_staff=False, is_superuser=False)
+            athlete_qs
             .select_related('primary_coach', 'primary_coach__reports_to')
             .order_by('username')
         )

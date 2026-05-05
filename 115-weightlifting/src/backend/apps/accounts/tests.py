@@ -655,7 +655,7 @@ class HeadRosterAssignmentTests(TestCase):
         staff_names = {row['username'] for row in j['staff']}
         athlete_names = {row['username'] for row in j['athletes']}
         self.assertIn('line_ra', staff_names)
-        self.assertIn('solo_coach', staff_names)
+        self.assertNotIn('solo_coach', staff_names)
         self.assertIn('ath_ra', athlete_names)
         line_row = next(row for row in j['staff'] if row['username'] == 'line_ra')
         athlete_row = next(row for row in j['athletes'] if row['username'] == 'ath_ra')
@@ -663,6 +663,29 @@ class HeadRosterAssignmentTests(TestCase):
         self.assertEqual(athlete_row['primary_coach_username'], 'line_ra')
         self.assertIn('org_label', line_row)
         self.assertIn('org_color_key', athlete_row)
+
+    def test_non_master_head_roster_is_scoped_to_own_team(self):
+        other_head = User.objects.create_user(
+            username='002_Headcoachother', password='longenoughpw1', user_type='head_coach',
+        )
+        other_line = User.objects.create_user(
+            username='048_otherline', password='longenoughpw1', user_type='coach',
+        )
+        other_line.reports_to = other_head
+        other_line.save(update_fields=['reports_to'])
+        other_athlete = User.objects.create_user(
+            username='049_otherathlete', password='longenoughpw1', user_type='athlete',
+        )
+        other_athlete.primary_coach = other_line
+        other_athlete.save(update_fields=['primary_coach'])
+
+        self._auth_head()
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        self.assertEqual({row['username'] for row in j['head_coaches']}, {'head_ra'})
+        self.assertEqual({row['username'] for row in j['staff']}, {'line_ra'})
+        self.assertEqual({row['username'] for row in j['athletes']}, {'ath_ra'})
 
     def test_roster_includes_inherited_org_color_metadata(self):
         prefixed_head = User.objects.create_user(

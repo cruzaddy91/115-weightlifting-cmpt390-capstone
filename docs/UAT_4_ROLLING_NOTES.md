@@ -64,6 +64,18 @@ Default AGMHC access should remain strict. GMHC may later delegate specific cont
 - Cover shift/change management.
 - Additional permissions as role needs become clear.
 
+## Multi-Lane AGMHC Assignment
+
+The current UAT 3.0 category model is prefix-based: one active AGMHC identity maps naturally to one lane such as `001_`, `002_`, `003_`, or `004_`.
+
+Future model work can allow one AGMHC to manage multiple lanes, for example:
+
+- AGMHC 1 manages `001` and `002`.
+- AGMHC 2 manages `003` and `004`.
+- GMHC keeps god-tier access to every lane.
+
+This likely needs an explicit category-assignment table instead of username prefix alone, plus limits such as no more than three active lane assignments per AGMHC.
+
 ## Schedule Expansion
 
 UAT 3.0 schedule starts simple. UAT 4.0 can add:

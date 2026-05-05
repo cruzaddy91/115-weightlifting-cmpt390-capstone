@@ -176,6 +176,13 @@
   min-width: 760px;
 }
 
+.head-category-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
 :root[data-ux-mode="simple"] .head-workspace-shell,
 :root[data-ux-mode="simple"] .head-uat-panel,
 :root[data-ux-mode="simple"] .head-assign-card,
