@@ -808,6 +808,68 @@
   margin-top: 0;
 }
 
+/* Skill-team blocks use 3 or 4 columns; global .head-athlete-table widths are for the old 3-col layout. */
+.head-skill-team-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.head-skill-team-section .head-skill-roster-table {
+  table-layout: fixed;
+  min-width: min(100%, 44rem);
+}
+
+.head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) th:nth-child(1),
+.head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) td:nth-child(1) {
+  width: 36%;
+}
+
+.head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) th:nth-child(2),
+.head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) td:nth-child(2) {
+  width: 22%;
+}
+
+.head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) th:nth-child(3),
+.head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) td:nth-child(3) {
+  width: 42%;
+}
+
+.head-skill-team-section .head-skill-roster-table--actions th:nth-child(1),
+.head-skill-team-section .head-skill-roster-table--actions td:nth-child(1) {
+  width: 28%;
+}
+
+.head-skill-team-section .head-skill-roster-table--actions th:nth-child(2),
+.head-skill-team-section .head-skill-roster-table--actions td:nth-child(2) {
+  width: 18%;
+}
+
+.head-skill-team-section .head-skill-roster-table--actions th:nth-child(3),
+.head-skill-team-section .head-skill-roster-table--actions td:nth-child(3) {
+  width: 22%;
+}
+
+.head-skill-team-section .head-skill-roster-table--actions .head-actions-col,
+.head-skill-team-section .head-skill-roster-table--actions .head-actions-cell {
+  width: 32%;
+}
+
+.head-skill-team-section .head-skill-roster-table th,
+.head-skill-team-section .head-skill-roster-table td {
+  vertical-align: middle;
+}
+
+.head-skill-team-section .head-skill-cell {
+  min-width: 0;
+}
+
+.head-skill-team-section .head-skill-select {
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .head-skill-badge {
   display: inline-flex;
   width: fit-content;

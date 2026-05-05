@@ -664,7 +664,10 @@ const HeadCoachDashboard = () => {
             {renderSkillBadge(section.key)}
             <span>{section.athletes.length} athlete(s)</span>
           </div>
-          <table className="head-table head-athlete-table">
+          <div className="head-skill-team-table-wrap">
+            <table
+              className={`head-table head-athlete-table head-skill-roster-table ${showActions ? 'head-skill-roster-table--actions' : ''}`}
+            >
             <thead>
               <tr>
                 <th>Athlete</th>
@@ -767,6 +770,7 @@ const HeadCoachDashboard = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </section>
       ))}
     </div>
