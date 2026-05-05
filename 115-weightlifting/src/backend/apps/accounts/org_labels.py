@@ -1,14 +1,14 @@
 import re
 
 
-MASTER_HEAD_USERNAME = '117_Headcoachone'
+MASTER_HEAD_USERNAME = '117_HeadcoachGM'
 MASTER_HEAD_LABEL = '117_MASTER_CHIEF'
 DEMO_HEAD_COACH_USERNAMES = (
     MASTER_HEAD_USERNAME,
     '118_Headcoachtwo',
     '119_Headcoachthree',
     '120_Headcoachfour',
-    '121_Headcoachfive',
+    '121_Headcoachone',
 )
 DEMO_COACH_USERNAME = '045_Coachone'
 DEMO_LINE_COACH_USERNAMES = (

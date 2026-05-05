@@ -633,7 +633,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_roster_includes_inherited_org_color_metadata(self):
         prefixed_head = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         unassigned_head = User.objects.create_user(
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -652,7 +652,7 @@ class HeadRosterAssignmentTests(TestCase):
         r = self.client.get(reverse('head-org-roster'))
         self.assertEqual(r.status_code, 200)
         j = r.json()
-        head_row = next(row for row in j['head_coaches'] if row['username'] == '117_Headcoachone')
+        head_row = next(row for row in j['head_coaches'] if row['username'] == '117_HeadcoachGM')
         unassigned_head_row = next(row for row in j['head_coaches'] if row['username'] == unassigned_head.username)
         line_row = next(row for row in j['staff'] if row['username'] == '045_Coachone')
         athlete_row = next(row for row in j['athletes'] if row['username'] == '000_Athlete1')
@@ -666,7 +666,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_roster_marks_demo_unassigned_athlete_pool_as_xxx_unassigned(self):
         prefixed_head = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
             User.objects.create_user(
@@ -686,7 +686,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_assign_standalone_head_to_agm_category(self):
         master = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         standalone = User.objects.create_user(
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -704,7 +704,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_move_agm_head_to_unassigned_category(self):
         master = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
             username='001_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -722,7 +722,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_cannot_assign_occupied_agm_category(self):
         master = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         User.objects.create_user(
             username='001_Existingagm', password='longenoughpw1', user_type='head_coach',
@@ -742,7 +742,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_soft_delete_standalone_head(self):
         master = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         standalone = User.objects.create_user(
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -1023,7 +1023,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_reassign_active_athlete_outside_org(self):
         master = User.objects.create_user(
-            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
         outside_head = User.objects.create_user(
             username='outside_head_reassign', password='longenoughpw1', user_type='head_coach',
@@ -1035,7 +1035,7 @@ class HeadRosterAssignmentTests(TestCase):
         outside.save(update_fields=['primary_coach'])
         t = self.client.post(
             reverse('token_obtain_pair'),
-            {'username': '117_Headcoachone', 'password': 'longenoughpw1'},
+            {'username': '117_HeadcoachGM', 'password': 'longenoughpw1'},
             format='json',
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
@@ -1109,9 +1109,9 @@ class DemoPruneCommandTests(TestCase):
         from django.core.management import call_command
 
         canonical_head = User.objects.create_user(
-            username='117_Headcoachone', password='pw', user_type='head_coach',
+            username='117_HeadcoachGM', password='pw', user_type='head_coach',
         )
-        for username in ('118_Headcoachtwo', '119_Headcoachthree', '120_Headcoachfour', '121_Headcoachfive'):
+        for username in ('118_Headcoachtwo', '119_Headcoachthree', '120_Headcoachfour', '121_Headcoachone'):
             User.objects.create_user(username=username, password='pw', user_type='head_coach')
         canonical_coach = User.objects.create_user(
             username='045_Coachone', password='pw', user_type='coach',
@@ -1144,11 +1144,11 @@ class DemoPruneCommandTests(TestCase):
             stdout=StringIO(),
         )
 
-        self.assertTrue(User.objects.filter(username='117_Headcoachone').exists())
+        self.assertTrue(User.objects.filter(username='117_HeadcoachGM').exists())
         self.assertTrue(User.objects.filter(username='118_Headcoachtwo').exists())
         self.assertTrue(User.objects.filter(username='119_Headcoachthree').exists())
         self.assertTrue(User.objects.filter(username='120_Headcoachfour').exists())
-        self.assertTrue(User.objects.filter(username='121_Headcoachfive').exists())
+        self.assertTrue(User.objects.filter(username='121_Headcoachone').exists())
         self.assertTrue(User.objects.filter(username='045_Coachone').exists())
         self.assertTrue(User.objects.filter(username='034_Coachtwo').exists())
         self.assertTrue(User.objects.filter(username='088_Coachthree').exists())

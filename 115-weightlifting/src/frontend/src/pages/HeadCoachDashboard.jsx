@@ -32,7 +32,7 @@ const COACH_ACCENT_CLASSES = [
   'graphite',
 ]
 const SHOW_HEAD_ANALYTICS = false
-const EXPECTED_STANDALONE_HEAD_SUFFIXES = ['Headcoachtwo', 'Headcoachthree', 'Headcoachfour', 'Headcoachfive']
+const EXPECTED_STANDALONE_HEAD_SUFFIXES = ['Headcoachtwo', 'Headcoachthree', 'Headcoachfour', 'Headcoachone']
 const EXPECTED_LINE_COACHES = ['045_Coachone', '034_Coachtwo', '088_Coachthree', '013_Coachfour']
 const EXPECTED_PRIMARY_ATHLETE = '000_Athlete1'
 const EXPECTED_PRIMARY_COACH = '045_Coachone'
@@ -64,7 +64,7 @@ const HEAD_CATEGORY_LINKS = [
   {
     prefix: '117',
     label: '117_MASTER_CHIEF',
-    username: '117_Headcoachone',
+    username: '117_HeadcoachGM',
     status: 'Global admin: the boss',
     colorKey: 'sage-green',
     to: '/head',
@@ -272,7 +272,7 @@ const HeadCoachDashboard = () => {
     const staffByUsername = new Map(roster.staff.map((s) => [s.username, s]))
     const athleteByUsername = new Map(roster.athletes.map((a) => [a.username, a]))
     const missingHeads = []
-    if (!headByUsername.has('117_Headcoachone')) missingHeads.push('117_Headcoachone')
+    if (!headByUsername.has('117_HeadcoachGM')) missingHeads.push('117_HeadcoachGM')
     const managedHeads = EXPECTED_STANDALONE_HEAD_SUFFIXES.map((suffix) => (
       roster.headCoaches.find((h) => h.username.endsWith(`_${suffix}`))
     ))
@@ -283,9 +283,15 @@ const HeadCoachDashboard = () => {
     const invalidHeadTags = managedHeads.filter(Boolean).filter((row) => (
       row.org_label !== 'XXX_UNASSIGNED' && !AGM_CATEGORY_OPTIONS.some((opt) => opt.prefix === row.org_prefix)
     ))
-    const unassignedLineCoaches = EXPECTED_LINE_COACHES.filter((username) => {
+    const validLineCoachHeadUsernames = new Set([
+      '117_HeadcoachGM',
+      ...roster.headCoaches
+        .filter((h) => AGM_CATEGORY_OPTIONS.some((opt) => opt.prefix !== 'XXX_UNASSIGNED' && opt.prefix === h.org_prefix))
+        .map((h) => h.username),
+    ])
+    const invalidLineCoachAssignments = EXPECTED_LINE_COACHES.filter((username) => {
       const row = staffByUsername.get(username)
-      return !row || row.reports_to_username !== '117_Headcoachone'
+      return !row || !validLineCoachHeadUsernames.has(row.reports_to_username)
     })
     const athlete = athleteByUsername.get(EXPECTED_PRIMARY_ATHLETE)
     const invalidUnassignedAthletes = EXPECTED_UNASSIGNED_ATHLETES.filter((username) => {
@@ -305,8 +311,8 @@ const HeadCoachDashboard = () => {
       window.alert(`Error: missing line coaches: ${missingLineCoaches.join(', ')}`)
       return
     }
-    if (unassignedLineCoaches.length > 0) {
-      window.alert(`Error: line coaches not assigned to @117_Headcoachone: ${unassignedLineCoaches.join(', ')}`)
+    if (invalidLineCoachAssignments.length > 0) {
+      window.alert(`Error: line coaches not assigned to @117_HeadcoachGM or an active AGM head coach: ${invalidLineCoachAssignments.join(', ')}`)
       return
     }
     if (!athlete || athlete.primary_coach_username !== EXPECTED_PRIMARY_COACH) {

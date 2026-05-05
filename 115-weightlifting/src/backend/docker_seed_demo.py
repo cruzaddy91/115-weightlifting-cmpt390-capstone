@@ -27,6 +27,26 @@ def assigned_head_variants(username):
     return [f'{prefix}_{suffix}' for prefix in ('001', '002', '003', '004')]
 
 
+def migrate_user_identity(old_username, new_username):
+    old_user = User.objects.filter(username=old_username).first()
+    if old_user is None:
+        return
+    new_user = User.objects.filter(username=new_username).first()
+    if new_user is None:
+        old_user.username = new_username
+        old_user.save(update_fields=['username'])
+        return
+    User.objects.filter(reports_to=old_user).update(reports_to=new_user)
+    User.objects.filter(primary_coach=old_user).update(primary_coach=new_user)
+    TrainingProgram.objects.filter(coach=old_user).update(
+        coach=new_user,
+        updated_at=timezone.now(),
+    )
+    old_user.email = f'archived_{old_user.pk}@{DEMO_EMAIL_DOMAIN}'
+    old_user.is_active = False
+    old_user.save(update_fields=['email', 'is_active'])
+
+
 def release_demo_email(email, except_user=None):
     blockers = User.objects.filter(email__iexact=email)
     if except_user is not None:
@@ -42,23 +62,28 @@ athlete_usernames = [
 ]
 legacy_demo_usernames = [
     '117_MASTER_CHIEF',
+    '117_Headcoachone',
     'Headcoachone',
     '001_Headcoachtwo',
     '001_Headcoachthree',
     '001_Headcoachfour',
     '001_Headcoachfive',
+    '002_Headcoachone',
     '002_Headcoachtwo',
     '002_Headcoachthree',
     '002_Headcoachfour',
     '002_Headcoachfive',
+    '003_Headcoachone',
     '003_Headcoachtwo',
     '003_Headcoachthree',
     '003_Headcoachfour',
     '003_Headcoachfive',
+    '004_Headcoachone',
     '004_Headcoachtwo',
     '004_Headcoachthree',
     '004_Headcoachfour',
     '004_Headcoachfive',
+    '121_Headcoachfive',
     'Coachone',
     '005_Coachone',
     '100_Coachone',
@@ -76,14 +101,18 @@ legacy_demo_usernames = [
     'Coachtwo',
 ]
 
+migrate_user_identity('117_Headcoachone', MASTER_HEAD_USERNAME)
+migrate_user_identity('121_Headcoachfive', '121_Headcoachone')
+migrate_user_identity('001_Headcoachfive', '001_Headcoachone')
+
 head, _ = User.objects.get_or_create(username=MASTER_HEAD_USERNAME, defaults={'user_type': 'head_coach'})
 head.user_type = 'head_coach'
-head.email = f'117_headcoachone@{DEMO_EMAIL_DOMAIN}'
+head.email = f'117_headcoachgm@{DEMO_EMAIL_DOMAIN}'
 head.is_active = True
 head.set_password(PASSWORD)
 head.save()
 
-legacy_heads = User.objects.filter(username__in=['Headcoachone', '117_MASTER_CHIEF'])
+legacy_heads = User.objects.filter(username__in=['Headcoachone', '117_MASTER_CHIEF', '117_Headcoachone'])
 for legacy_head in legacy_heads:
     User.objects.filter(reports_to=legacy_head).update(reports_to=head)
     User.objects.filter(primary_coach=legacy_head).update(primary_coach=head)

@@ -19,7 +19,7 @@ from datetime import date
 
 
 DEFAULT_PASSWORD = os.getenv("DEMO_PASSWORD", "Passw0rd!123")
-MASTER_HEAD_USERNAME = "117_Headcoachone"
+MASTER_HEAD_USERNAME = "117_HeadcoachGM"
 SEEDED_COACH_USERNAME = "045_Coachone"
 SEEDED_ATHLETE_USERNAME = "000_Athlete1"
 SEEDED_UNASSIGNED_ATHLETE_USERNAMES = [
@@ -415,7 +415,7 @@ def main() -> int:
             "118_Headcoachtwo",
             "119_Headcoachthree",
             "120_Headcoachfour",
-            "121_Headcoachfive",
+            "121_Headcoachone",
         }
         check(
             results,
@@ -428,7 +428,7 @@ def main() -> int:
             ),
             head_roster,
         )
-        head_to_assign = next((row for row in roster_head_rows if row.get("username") == "121_Headcoachfive"), None)
+        head_to_assign = next((row for row in roster_head_rows if row.get("username") == "121_Headcoachone"), None)
         head_to_delete = next((row for row in roster_head_rows if row.get("username") == "120_Headcoachfour"), None)
         status, payload = client.request(
             "PATCH",
@@ -441,7 +441,7 @@ def main() -> int:
             results,
             "assigned standalone head coach receives AGM metadata",
             isinstance(payload, dict)
-            and payload.get("username") == "001_Headcoachfive"
+            and payload.get("username") == "001_Headcoachone"
             and payload.get("org_label") == "001_INFINITY",
             payload,
         )
@@ -457,7 +457,7 @@ def main() -> int:
             results,
             "unassigned AGM head coach receives XXX metadata",
             isinstance(payload, dict)
-            and payload.get("username") == "121_Headcoachfive"
+            and payload.get("username") == "121_Headcoachone"
             and payload.get("org_label") == "XXX_UNASSIGNED",
             payload,
         )

@@ -32,8 +32,8 @@ Suggested walkthrough accounts:
 
 | Role | Username | URL |
 | --- | --- | --- |
-| GM head coach | `117_Headcoachone` | <http://localhost:4173/head> |
-| Standalone head coaches | `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachfive` | <http://localhost:4173/head> |
+| GM head coach | `117_HeadcoachGM` | <http://localhost:4173/head> |
+| Standalone head coaches | `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachone` | <http://localhost:4173/head> |
 | Primary line coach | `045_Coachone` | <http://localhost:4173/coach> |
 | Demo line coaches | `034_Coachtwo`, `088_Coachthree`, `013_Coachfour` | <http://localhost:4173/coach> |
 | Athlete | `000_Athlete1` | <http://localhost:4173/athlete> |
