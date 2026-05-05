@@ -74,8 +74,10 @@ write_summary() {
 ## Artifacts
 
 - docker_uat_latest.json
-- auth_stress_coachone_latest.json
-- auth_stress_jonsnow_latest.json
+- auth_stress_045_coachone_latest.json
+- auth_stress_000_athlete1_latest.json
+- ssvc_clean_before_uat_latest.txt
+- ssvc_clean_after_uat_latest.txt
 - compose_config_latest.txt
 - compose_ps_latest.txt
 - backend_logs_latest.txt
@@ -88,6 +90,7 @@ ensure_env_file
 ensure_env_key "COACH_SIGNUP_CODE" "$UAT_COACH_SIGNUP_CODE"
 ensure_env_key "THROTTLE_LOGIN" "120/min"
 ensure_env_key "THROTTLE_REGISTER" "60/min"
+ensure_env_key "PASSWORD_RESET_DEBUG_RESPONSE" "True"
 
 DEMO_PASSWORD_FROM_ENV="$(env_value DEMO_PASSWORD)"
 if [ -n "$DEMO_PASSWORD_FROM_ENV" ]; then
@@ -112,6 +115,13 @@ wait_for_url "frontend" "$FRONTEND_URL/" "200"
 
 export BACKEND_URL FRONTEND_URL DEMO_PASSWORD UAT_COACH_SIGNUP_CODE
 
+echo "Running SSVC cleanup before UAT..."
+docker compose exec -T backend python manage.py prune_demo_users \
+  --apply \
+  --permanent-clean \
+  --demo-password "$DEMO_PASSWORD" \
+  > "$REPORT_DIR/ssvc_clean_before_uat_latest.txt"
+
 echo "Running Docker API UAT..."
 python3 "$ROOT_DIR/scripts/docker_uat.py" \
   --backend-url "$BACKEND_URL" \
@@ -120,21 +130,28 @@ python3 "$ROOT_DIR/scripts/docker_uat.py" \
   --coach-signup-code "$UAT_COACH_SIGNUP_CODE" \
   > "$REPORT_DIR/docker_uat_latest.json"
 
-echo "Running auth stress for Coachone..."
+echo "Running auth stress for 045_Coachone..."
 python3 "$ROOT_DIR/scripts/docker_auth_stress.py" \
   --backend-url "$BACKEND_URL" \
-  --username "Coachone" \
+  --username "045_Coachone" \
   --password "$DEMO_PASSWORD" \
   --cycles "$STRESS_CYCLES" \
-  > "$REPORT_DIR/auth_stress_coachone_latest.json"
+  > "$REPORT_DIR/auth_stress_045_coachone_latest.json"
 
-echo "Running auth stress for jon_snow..."
+echo "Running auth stress for 000_Athlete1..."
 python3 "$ROOT_DIR/scripts/docker_auth_stress.py" \
   --backend-url "$BACKEND_URL" \
-  --username "jon_snow" \
+  --username "000_Athlete1" \
   --password "$DEMO_PASSWORD" \
   --cycles "$STRESS_CYCLES" \
-  > "$REPORT_DIR/auth_stress_jonsnow_latest.json"
+  > "$REPORT_DIR/auth_stress_000_athlete1_latest.json"
+
+echo "Running SSVC cleanup after UAT..."
+docker compose exec -T backend python manage.py prune_demo_users \
+  --apply \
+  --permanent-clean \
+  --demo-password "$DEMO_PASSWORD" \
+  > "$REPORT_DIR/ssvc_clean_after_uat_latest.txt"
 
 docker compose ps > "$REPORT_DIR/compose_ps_latest.txt" || true
 docker compose logs --no-color --tail=300 backend > "$REPORT_DIR/backend_logs_latest.txt" 2>&1 || true

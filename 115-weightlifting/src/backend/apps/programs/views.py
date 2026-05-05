@@ -29,7 +29,7 @@ class ProgramListCreate(APIView):
             visibility = Q(coach=user) | Q(athlete=user)
         programs = (
             TrainingProgram.objects
-            .filter(visibility)
+            .filter(visibility, athlete__is_active=True)
             .select_related('coach', 'athlete')
             .prefetch_related(Prefetch('completion_records', queryset=ProgramCompletion.objects.all()))
             .distinct()
@@ -57,7 +57,7 @@ class ProgramDetail(APIView):
         if not is_line_coach(request.user):
             return Response({'detail': 'Only coaches can edit programs.'}, status=status.HTTP_403_FORBIDDEN)
 
-        program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user)
+        program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user, athlete__is_active=True)
         serializer = ProgramUpdateSerializer(program, data=request.data, partial=True)
         if serializer.is_valid():
             updated_program = serializer.save()
@@ -72,13 +72,13 @@ class ProgramAssign(APIView):
         if not is_line_coach(request.user):
             return Response({'detail': 'Only coaches can assign programs.'}, status=status.HTTP_403_FORBIDDEN)
 
-        program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user)
+        program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user, athlete__is_active=True)
         athlete_id = request.data.get('athlete_id')
         if not athlete_id:
             return Response({'athlete_id': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            athlete = User.objects.get(id=athlete_id, user_type='athlete')
+            athlete = User.objects.get(id=athlete_id, user_type='athlete', is_active=True)
         except User.DoesNotExist:
             return Response({'athlete_id': ['Selected athlete does not exist.']}, status=status.HTTP_400_BAD_REQUEST)
 

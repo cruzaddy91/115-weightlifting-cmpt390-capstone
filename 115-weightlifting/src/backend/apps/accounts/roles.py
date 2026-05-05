@@ -26,7 +26,7 @@ def staff_coach_queryset(head):
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
-    return User.objects.filter(reports_to=head, user_type='coach')
+    return User.objects.filter(reports_to=head, user_type='coach', is_active=True)
 
 
 def coach_may_bind_athlete(coach_user, athlete) -> bool:
@@ -35,7 +35,7 @@ def coach_may_bind_athlete(coach_user, athlete) -> bool:
     Line coach: athlete is unassigned or already lists this coach as primary.
     Head coach: primary is unset or points to the head or any line coach under them.
     """
-    if getattr(athlete, 'user_type', None) != 'athlete':
+    if getattr(athlete, 'user_type', None) != 'athlete' or not getattr(athlete, 'is_active', False):
         return False
     pid = getattr(athlete, 'primary_coach_id', None)
     if getattr(coach_user, 'user_type', None) == 'coach':

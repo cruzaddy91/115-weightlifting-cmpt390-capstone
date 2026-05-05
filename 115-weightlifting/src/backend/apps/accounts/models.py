@@ -1,6 +1,13 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+
+
+class WeightliftingUserManager(UserManager):
+    def _create_user(self, username, email, password, **extra_fields):
+        if not email:
+            email = f'{username}@example.invalid'
+        return super()._create_user(username, email, password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -15,6 +22,7 @@ class User(AbstractUser):
         ('F', 'Female'),
     ]
 
+    email = models.EmailField(unique=True)
     user_type = models.CharField(max_length=12, choices=USER_TYPE_CHOICES)
     # Line coaches report to exactly one head coach; head coaches leave this null.
     reports_to = models.ForeignKey(
@@ -35,8 +43,20 @@ class User(AbstractUser):
     # Athlete competition profile (optional; coaches typically omit).
     bodyweight_kg = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, null=True, blank=True)
+    # MVP recoverable delete: hide/block the account while retaining data for 30 days.
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    recoverable_until = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='deleted_athlete_accounts',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = WeightliftingUserManager()
 
     def clean(self):
         super().clean()

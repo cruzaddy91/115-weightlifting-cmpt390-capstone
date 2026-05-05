@@ -7,6 +7,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from apps.accounts.org_labels import DEMO_UNASSIGNED_ATHLETE_USERNAMES
 from apps.accounts.weight_class import competitive_weight_class_label
 from apps.athletes.models import PersonalRecord, ProgramCompletion
 from apps.programs.models import TrainingProgram
@@ -25,7 +26,12 @@ class CoachRegistrationGateTests(TestCase):
             os.environ.pop('COACH_SIGNUP_CODE', None)
             response = self.client.post(
                 self.url,
-                {'username': 'u1', 'password': 'longenoughpw1', 'user_type': 'coach'},
+                {
+                    'username': '005_u1',
+                    'email': 'u1@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'coach',
+                },
                 format='json',
             )
         self.assertEqual(response.status_code, 400)
@@ -36,7 +42,8 @@ class CoachRegistrationGateTests(TestCase):
             response = self.client.post(
                 self.url,
                 {
-                    'username': 'u2',
+                    'username': '006_u2',
+                    'email': 'u2@example.invalid',
                     'password': 'longenoughpw1',
                     'user_type': 'coach',
                     'coach_signup_code': 'nope',
@@ -45,14 +52,15 @@ class CoachRegistrationGateTests(TestCase):
             )
         self.assertEqual(response.status_code, 400)
         self.assertIn('coach_signup_code', response.json())
-        self.assertFalse(User.objects.filter(username='u2').exists())
+        self.assertFalse(User.objects.filter(username='006_u2').exists())
 
     def test_coach_signup_succeeds_with_correct_code(self):
         with mock.patch.dict(os.environ, {'COACH_SIGNUP_CODE': 'secret-2026'}):
             response = self.client.post(
                 self.url,
                 {
-                    'username': 'u3',
+                    'username': '005_u3',
+                    'email': 'u3@example.invalid',
                     'password': 'longenoughpw1',
                     'user_type': 'coach',
                     'coach_signup_code': 'secret-2026',
@@ -60,23 +68,184 @@ class CoachRegistrationGateTests(TestCase):
                 format='json',
             )
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(User.objects.filter(username='u3', user_type='coach').exists())
+        self.assertTrue(User.objects.filter(username='005_u3', user_type='coach').exists())
 
     def test_athlete_signup_never_requires_code(self):
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop('COACH_SIGNUP_CODE', None)
             response = self.client.post(
                 self.url,
-                {'username': 'a1', 'password': 'longenoughpw1', 'user_type': 'athlete'},
+                {
+                    'username': 'a1',
+                    'email': 'a1@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'athlete',
+                },
                 format='json',
             )
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(User.objects.filter(username='a1', user_type='athlete').exists())
+        self.assertTrue(User.objects.filter(username='000_a1', user_type='athlete').exists())
+        self.assertEqual(response.json()['username'], '000_a1')
+
+    def test_athlete_signup_rejects_underscore_in_selected_username(self):
+        response = self.client.post(
+            self.url,
+            {
+                'username': 'bad_name',
+                'email': 'badname@example.invalid',
+                'password': 'longenoughpw1',
+                'user_type': 'athlete',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('username', response.json())
+
+    def test_athlete_signup_uses_next_numeric_prefix(self):
+        User.objects.create_user(
+            username='000_existing', password='longenoughpw1', user_type='athlete',
+        )
+        response = self.client.post(
+            self.url,
+            {
+                'username': 'nextathlete',
+                'email': 'nextathlete@example.invalid',
+                'password': 'longenoughpw1',
+                'user_type': 'athlete',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['username'], '005_nextathlete')
+
+    def test_athlete_signup_skips_reserved_numeric_prefixes(self):
+        for prefix in ('000', '005'):
+            User.objects.create_user(
+                username=f'{prefix}_existing', password='longenoughpw1', user_type='athlete',
+            )
+        response = self.client.post(
+            self.url,
+            {
+                'username': 'reservedskip',
+                'email': 'reservedskip@example.invalid',
+                'password': 'longenoughpw1',
+                'user_type': 'athlete',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['username'], '006_reservedskip')
+
+    def test_athlete_signup_assigns_first_15_available_prefixes(self):
+        for prefix in ('013', '034', '045', '088'):
+            User.objects.create_user(
+                username=f'{prefix}_coach', password='longenoughpw1', user_type='coach',
+            )
+        expected_prefixes = [
+            '000', '005', '006', '007', '008',
+            '009', '010', '011', '012', '014',
+            '015', '016', '017', '018', '019',
+        ]
+
+        actual_usernames = []
+        for idx in range(15):
+            response = self.client.post(
+                self.url,
+                {
+                    'username': f'batchathlete{idx + 1}',
+                    'email': f'batchathlete{idx + 1}@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'athlete',
+                },
+                format='json',
+            )
+            self.assertEqual(response.status_code, 201)
+            actual_usernames.append(response.json()['username'])
+
+        self.assertEqual(
+            actual_usernames,
+            [f'{prefix}_batchathlete{idx + 1}' for idx, prefix in enumerate(expected_prefixes)],
+        )
+
+    def test_coach_signup_rejects_reserved_numeric_prefix(self):
+        with mock.patch.dict(os.environ, {'COACH_SIGNUP_CODE': 'secret-2026'}):
+            response = self.client.post(
+                self.url,
+                {
+                    'username': '001_reservedcoach',
+                    'email': 'reservedcoach@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'coach',
+                    'coach_signup_code': 'secret-2026',
+                },
+                format='json',
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('username', response.json())
+        self.assertFalse(User.objects.filter(username='001_reservedcoach').exists())
+
+    def test_coach_signup_rejects_out_of_pool_numeric_prefix(self):
+        with mock.patch.dict(os.environ, {'COACH_SIGNUP_CODE': 'secret-2026'}):
+            response = self.client.post(
+                self.url,
+                {
+                    'username': '100_outofpoolcoach',
+                    'email': 'outofpoolcoach@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'coach',
+                    'coach_signup_code': 'secret-2026',
+                },
+                format='json',
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('username', response.json())
+        self.assertFalse(User.objects.filter(username='100_outofpoolcoach').exists())
+
+    def test_coach_signup_rejects_prefix_already_used_by_athlete(self):
+        User.objects.create_user(
+            username='005_existingathlete', password='longenoughpw1', user_type='athlete',
+        )
+        with mock.patch.dict(os.environ, {'COACH_SIGNUP_CODE': 'secret-2026'}):
+            response = self.client.post(
+                self.url,
+                {
+                    'username': '005_newcoach',
+                    'email': 'newcoach@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'coach',
+                    'coach_signup_code': 'secret-2026',
+                },
+                format='json',
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('username', response.json())
+        self.assertFalse(User.objects.filter(username='005_newcoach').exists())
+
+    def test_coach_signup_accepts_available_normal_member_prefix(self):
+        with mock.patch.dict(os.environ, {'COACH_SIGNUP_CODE': 'secret-2026'}):
+            response = self.client.post(
+                self.url,
+                {
+                    'username': '005_newcoach',
+                    'email': 'availablecoach@example.invalid',
+                    'password': 'longenoughpw1',
+                    'user_type': 'coach',
+                    'coach_signup_code': 'secret-2026',
+                },
+                format='json',
+            )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(User.objects.filter(username='005_newcoach').exists())
 
     def test_head_coach_signup_rejected(self):
         response = self.client.post(
             self.url,
-            {'username': 'hc1', 'password': 'longenoughpw1', 'user_type': 'head_coach'},
+            {
+                'username': 'hc1',
+                'email': 'hc1@example.invalid',
+                'password': 'longenoughpw1',
+                'user_type': 'head_coach',
+            },
             format='json',
         )
         self.assertEqual(response.status_code, 400)
@@ -235,7 +404,7 @@ class AthleteListScopingTests(TestCase):
         response = self.client.get(reverse('athlete-list'), {'scope': 'all'})
         self.assertEqual(response.status_code, 403)
 
-    def test_head_scope_all_is_org_pool_only(self):
+    def test_head_scope_all_includes_all_active_athletes(self):
         head = User.objects.create_user(
             username='head_list', password='longenoughpw1', user_type='head_coach',
         )
@@ -253,12 +422,36 @@ class AthleteListScopingTests(TestCase):
             username='stranger_outside', password='longenoughpw1', user_type='athlete',
         )
         stranger.save()
+        outside_head = User.objects.create_user(
+            username='outside_head', password='longenoughpw1', user_type='head_coach',
+        )
+        outside_athlete = User.objects.create_user(
+            username='outside_athlete', password='longenoughpw1', user_type='athlete',
+        )
+        outside_athlete.primary_coach = outside_head
+        outside_athlete.save(update_fields=['primary_coach'])
         self.client.force_authenticate(user=head)
         r = self.client.get(reverse('athlete-list'), {'scope': 'all'})
         self.assertEqual(r.status_code, 200)
         names = {a['username'] for a in r.json()['results']}
         self.assertIn('org_athlete', names)
-        self.assertNotIn('stranger_outside', names)
+        self.assertIn('stranger_outside', names)
+        self.assertIn('outside_athlete', names)
+
+    def test_head_scope_all_hides_inactive_archived_athletes(self):
+        head = User.objects.create_user(
+            username='head_archive_list', password='longenoughpw1', user_type='head_coach',
+        )
+        archived = User.objects.create_user(
+            username='archived_athlete', password='longenoughpw1', user_type='athlete',
+        )
+        archived.is_active = False
+        archived.save(update_fields=['is_active'])
+        self.client.force_authenticate(user=head)
+        r = self.client.get(reverse('athlete-list'), {'scope': 'all'})
+        self.assertEqual(r.status_code, 200)
+        names = {a['username'] for a in r.json()['results']}
+        self.assertNotIn('archived_athlete', names)
 
     def test_q_filter_narrows_results(self):
         response = self.client.get(reverse('athlete-list'), {'scope': 'mine', 'q': 'my_ath'})
@@ -426,9 +619,210 @@ class HeadRosterAssignmentTests(TestCase):
         r = self.client.get(reverse('head-org-roster'))
         self.assertEqual(r.status_code, 200)
         j = r.json()
-        self.assertEqual(len(j['staff']), 1)
-        self.assertEqual(j['staff'][0]['username'], 'line_ra')
-        self.assertEqual(len(j['athletes']), 1)
+        staff_names = {row['username'] for row in j['staff']}
+        athlete_names = {row['username'] for row in j['athletes']}
+        self.assertIn('line_ra', staff_names)
+        self.assertIn('solo_coach', staff_names)
+        self.assertIn('ath_ra', athlete_names)
+        line_row = next(row for row in j['staff'] if row['username'] == 'line_ra')
+        athlete_row = next(row for row in j['athletes'] if row['username'] == 'ath_ra')
+        self.assertEqual(line_row['reports_to_username'], 'head_ra')
+        self.assertEqual(athlete_row['primary_coach_username'], 'line_ra')
+        self.assertIn('org_label', line_row)
+        self.assertIn('org_color_key', athlete_row)
+
+    def test_roster_includes_inherited_org_color_metadata(self):
+        prefixed_head = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        unassigned_head = User.objects.create_user(
+            username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
+        )
+        prefixed_line = User.objects.create_user(
+            username='045_Coachone', password='longenoughpw1', user_type='coach',
+        )
+        prefixed_line.reports_to = prefixed_head
+        prefixed_line.save(update_fields=['reports_to'])
+        prefixed_athlete = User.objects.create_user(
+            username='000_Athlete1', password='longenoughpw1', user_type='athlete',
+        )
+        prefixed_athlete.primary_coach = prefixed_line
+        prefixed_athlete.save(update_fields=['primary_coach'])
+        self.client.force_authenticate(user=prefixed_head)
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        head_row = next(row for row in j['head_coaches'] if row['username'] == '117_Headcoachone')
+        unassigned_head_row = next(row for row in j['head_coaches'] if row['username'] == unassigned_head.username)
+        line_row = next(row for row in j['staff'] if row['username'] == '045_Coachone')
+        athlete_row = next(row for row in j['athletes'] if row['username'] == '000_Athlete1')
+        for row in (head_row, line_row, athlete_row):
+            self.assertEqual(row['org_prefix'], '117')
+            self.assertEqual(row['org_label'], '117_MASTER_CHIEF')
+            self.assertEqual(row['org_color_key'], 'sage-green')
+        self.assertIsNone(unassigned_head_row['org_prefix'])
+        self.assertEqual(unassigned_head_row['org_label'], 'XXX_UNASSIGNED')
+        self.assertEqual(unassigned_head_row['org_color_key'], 'graphite')
+
+    def test_roster_marks_demo_unassigned_athlete_pool_as_xxx_unassigned(self):
+        prefixed_head = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
+            User.objects.create_user(
+                username=username, password='longenoughpw1', user_type='athlete',
+            )
+        self.client.force_authenticate(user=prefixed_head)
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        rows_by_username = {row['username']: row for row in r.json()['athletes']}
+
+        for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
+            self.assertIn(username, rows_by_username)
+            self.assertIsNone(rows_by_username[username]['primary_coach_id'])
+            self.assertIsNone(rows_by_username[username]['org_prefix'])
+            self.assertEqual(rows_by_username[username]['org_label'], 'XXX_UNASSIGNED')
+            self.assertEqual(rows_by_username[username]['org_color_key'], 'graphite')
+
+    def test_master_head_can_assign_standalone_head_to_agm_category(self):
+        master = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        standalone = User.objects.create_user(
+            username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-coach-assignment', args=[standalone.id]),
+            {'category_prefix': '001'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        standalone.refresh_from_db()
+        self.assertEqual(standalone.username, '001_Headcoachtwo')
+        self.assertEqual(r.json()['org_label'], '001_INFINITY')
+
+    def test_master_head_can_move_agm_head_to_unassigned_category(self):
+        master = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        agm = User.objects.create_user(
+            username='001_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-coach-assignment', args=[agm.id]),
+            {'category_prefix': 'XXX_UNASSIGNED'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        agm.refresh_from_db()
+        self.assertEqual(agm.username, '118_Headcoachtwo')
+        self.assertEqual(r.json()['org_label'], 'XXX_UNASSIGNED')
+
+    def test_master_head_cannot_assign_occupied_agm_category(self):
+        master = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        User.objects.create_user(
+            username='001_Existingagm', password='longenoughpw1', user_type='head_coach',
+        )
+        standalone = User.objects.create_user(
+            username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.patch(
+            reverse('head-coach-assignment', args=[standalone.id]),
+            {'category_prefix': '001'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 409)
+        standalone.refresh_from_db()
+        self.assertEqual(standalone.username, '118_Headcoachtwo')
+
+    def test_master_head_can_soft_delete_standalone_head(self):
+        master = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        standalone = User.objects.create_user(
+            username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
+        )
+        self.client.force_authenticate(user=master)
+        r = self.client.delete(reverse('head-coach-assignment', args=[standalone.id]))
+        self.assertEqual(r.status_code, 200)
+        standalone.refresh_from_db()
+        self.assertFalse(standalone.is_active)
+        self.assertEqual(standalone.deleted_by, master)
+        self.assertIsNotNone(standalone.recoverable_until)
+
+    def test_non_master_head_cannot_manage_head_categories(self):
+        non_master = User.objects.create_user(
+            username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
+        )
+        standalone = User.objects.create_user(
+            username='119_Headcoachthree', password='longenoughpw1', user_type='head_coach',
+        )
+        self.client.force_authenticate(user=non_master)
+        r = self.client.patch(
+            reverse('head-coach-assignment', args=[standalone.id]),
+            {'category_prefix': '001'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_roster_includes_unassigned_athletes(self):
+        unassigned = User.objects.create_user(
+            username='ath_unassigned_ra', password='longenoughpw1', user_type='athlete',
+        )
+        other_head = User.objects.create_user(
+            username='other_head_ra', password='longenoughpw1', user_type='head_coach',
+        )
+        outside = User.objects.create_user(
+            username='ath_outside_ra', password='longenoughpw1', user_type='athlete',
+        )
+        outside.primary_coach = other_head
+        outside.save(update_fields=['primary_coach'])
+
+        self._auth_head()
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        names = {row['username'] for row in r.json()['athletes']}
+        self.assertIn(unassigned.username, names)
+        self.assertIn(outside.username, names)
+
+    def test_roster_hides_inactive_archived_users(self):
+        archived_coach = User.objects.create_user(
+            username='archived_coach_ra', password='longenoughpw1', user_type='coach',
+        )
+        archived_coach.is_active = False
+        archived_coach.save(update_fields=['is_active'])
+        archived_athlete = User.objects.create_user(
+            username='archived_athlete_ra', password='longenoughpw1', user_type='athlete',
+        )
+        archived_athlete.is_active = False
+        archived_athlete.save(update_fields=['is_active'])
+
+        self._auth_head()
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        staff_names = {row['username'] for row in r.json()['staff']}
+        athlete_names = {row['username'] for row in r.json()['athletes']}
+        self.assertNotIn(archived_coach.username, staff_names)
+        self.assertNotIn(archived_athlete.username, athlete_names)
+
+    def test_roster_hides_django_admin_accounts(self):
+        admin_head = User.objects.create_user(
+            username='Adminone', password='longenoughpw1', user_type='head_coach',
+        )
+        admin_head.is_staff = True
+        admin_head.is_superuser = True
+        admin_head.save(update_fields=['is_staff', 'is_superuser'])
+
+        self._auth_head()
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        head_names = {row['username'] for row in r.json()['head_coaches']}
+        self.assertNotIn('Adminone', head_names)
 
     def test_invite_staff_by_username(self):
         self._auth_head()
@@ -475,6 +869,75 @@ class HeadRosterAssignmentTests(TestCase):
         self.line.refresh_from_db()
         self.assertEqual(self.line.reports_to_id, self.head.id)
 
+    def test_reassign_staff_to_head_by_id(self):
+        other_head = User.objects.create_user(
+            username='other_head_staff', password='longenoughpw1', user_type='head_coach',
+        )
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-staff-link', kwargs={'user_id': self.line.id}),
+            {'reports_to_id': other_head.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.reports_to_id, other_head.id)
+
+    def test_unassign_staff_by_reports_to_null_makes_roster_unaffiliated(self):
+        from datetime import date
+
+        from apps.programs.models import TrainingProgram
+
+        prog = TrainingProgram.objects.create(
+            coach=self.line,
+            athlete=self.ath,
+            name='staff_unassign_prog',
+            start_date=date(2026, 4, 1),
+        )
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-staff-link', kwargs={'user_id': self.line.id}),
+            {'reports_to_id': None},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.line.refresh_from_db()
+        self.ath.refresh_from_db()
+        prog.refresh_from_db()
+        self.assertIsNone(self.line.reports_to_id)
+        self.assertIsNone(self.ath.primary_coach_id)
+        self.assertEqual(prog.coach_id, self.head.id)
+
+    def test_delete_staff_soft_deletes_and_unassigns_roster(self):
+        from datetime import date
+
+        from django.utils import timezone
+        from apps.programs.models import TrainingProgram
+
+        prog = TrainingProgram.objects.create(
+            coach=self.line,
+            athlete=self.ath,
+            name='staff_delete_prog',
+            start_date=date(2026, 4, 1),
+        )
+        self._auth_head()
+        before = timezone.now()
+        r = self.client.delete(
+            reverse('head-staff-link', kwargs={'user_id': self.line.id}),
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.line.refresh_from_db()
+        self.ath.refresh_from_db()
+        prog.refresh_from_db()
+        self.assertFalse(self.line.is_active)
+        self.assertIsNone(self.line.reports_to_id)
+        self.assertEqual(self.line.deleted_by_id, self.head.id)
+        self.assertGreaterEqual(self.line.deleted_at, before)
+        self.assertIsNotNone(self.line.recoverable_until)
+        self.assertIsNone(self.ath.primary_coach_id)
+        self.assertEqual(prog.coach_id, self.head.id)
+
     def test_reassign_athlete_to_head(self):
         self._auth_head()
         r = self.client.patch(
@@ -514,6 +977,120 @@ class HeadRosterAssignmentTests(TestCase):
         self.assertEqual(self.ath.primary_coach_id, other.id)
         self.assertEqual(prog.coach_id, other.id)
 
+    def test_unassign_athlete_keeps_account_and_moves_programs_to_head(self):
+        from datetime import date
+
+        from apps.programs.models import TrainingProgram
+
+        prog = TrainingProgram.objects.create(
+            coach=self.line,
+            athlete=self.ath,
+            name='unassign_prog',
+            start_date=date(2026, 4, 1),
+        )
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': self.ath.id}),
+            {'primary_coach_id': None},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.ath.refresh_from_db()
+        prog.refresh_from_db()
+        self.assertIsNone(self.ath.primary_coach_id)
+        self.assertTrue(self.ath.is_active)
+        self.assertEqual(prog.coach_id, self.head.id)
+
+    def test_head_can_unassign_active_athlete_outside_org(self):
+        other_head = User.objects.create_user(
+            username='outside_head_unassign', password='longenoughpw1', user_type='head_coach',
+        )
+        outside = User.objects.create_user(
+            username='outside_ath_unassign', password='longenoughpw1', user_type='athlete',
+        )
+        outside.primary_coach = other_head
+        outside.save(update_fields=['primary_coach'])
+
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': outside.id}),
+            {'primary_coach_id': None},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        outside.refresh_from_db()
+        self.assertIsNone(outside.primary_coach_id)
+
+    def test_master_head_can_reassign_active_athlete_outside_org(self):
+        master = User.objects.create_user(
+            username='117_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        outside_head = User.objects.create_user(
+            username='outside_head_reassign', password='longenoughpw1', user_type='head_coach',
+        )
+        outside = User.objects.create_user(
+            username='outside_ath_reassign', password='longenoughpw1', user_type='athlete',
+        )
+        outside.primary_coach = outside_head
+        outside.save(update_fields=['primary_coach'])
+        t = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': '117_Headcoachone', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': outside.id}),
+            {'primary_coach_id': master.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        outside.refresh_from_db()
+        self.assertEqual(outside.primary_coach_id, master.id)
+
+    def test_delete_athlete_soft_deletes_with_30_day_recovery_window(self):
+        from datetime import date
+
+        from django.utils import timezone
+        from apps.programs.models import TrainingProgram
+
+        prog = TrainingProgram.objects.create(
+            coach=self.line,
+            athlete=self.ath,
+            name='delete_prog',
+            start_date=date(2026, 4, 1),
+        )
+        self._auth_head()
+        before = timezone.now()
+        r = self.client.delete(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': self.ath.id}),
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.ath.refresh_from_db()
+        prog.refresh_from_db()
+        self.assertFalse(self.ath.is_active)
+        self.assertIsNone(self.ath.primary_coach_id)
+        self.assertEqual(self.ath.deleted_by_id, self.head.id)
+        self.assertIsNotNone(self.ath.deleted_at)
+        self.assertGreaterEqual(self.ath.deleted_at, before)
+        self.assertIsNotNone(self.ath.recoverable_until)
+        self.assertEqual((self.ath.recoverable_until.date() - self.ath.deleted_at.date()).days, 30)
+        self.assertEqual(prog.coach_id, self.head.id)
+
+    def test_line_coach_cannot_delete_athlete(self):
+        t = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'line_ra', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
+        r = self.client.delete(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': self.ath.id}),
+            format='json',
+        )
+        self.assertEqual(r.status_code, 403)
+
     def test_coach_forbidden_roster(self):
         t = self.client.post(
             reverse('token_obtain_pair'),
@@ -523,6 +1100,66 @@ class HeadRosterAssignmentTests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
         r = self.client.get(reverse('head-org-roster'))
         self.assertEqual(r.status_code, 403)
+
+
+class DemoPruneCommandTests(TestCase):
+    def test_permanent_clean_removes_demo_uat_leftovers_only(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        canonical_head = User.objects.create_user(
+            username='117_Headcoachone', password='pw', user_type='head_coach',
+        )
+        for username in ('118_Headcoachtwo', '119_Headcoachthree', '120_Headcoachfour', '121_Headcoachfive'):
+            User.objects.create_user(username=username, password='pw', user_type='head_coach')
+        canonical_coach = User.objects.create_user(
+            username='045_Coachone', password='pw', user_type='coach',
+        )
+        canonical_coach.reports_to = canonical_head
+        canonical_coach.save(update_fields=['reports_to'])
+        for username in ('034_Coachtwo', '088_Coachthree', '013_Coachfour'):
+            extra_coach = User.objects.create_user(
+                username=username, password='pw', user_type='coach',
+            )
+            extra_coach.reports_to = canonical_head
+            extra_coach.save(update_fields=['reports_to'])
+        canonical_athlete = User.objects.create_user(
+            username='000_Athlete1', password='pw', user_type='athlete',
+        )
+        canonical_athlete.primary_coach = canonical_coach
+        canonical_athlete.save(update_fields=['primary_coach'])
+        for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
+            User.objects.create_user(username=username, password='pw', user_type='athlete')
+        User.objects.create_user(username='docker_UAT_coach_1', password='pw', user_type='coach')
+        User.objects.create_user(username='005_dockerUATAthlete1', password='pw', user_type='athlete')
+        User.objects.create_user(username='Adminone', password='pw', user_type='head_coach')
+        User.objects.create_user(username='future_real_user', password='pw', user_type='athlete')
+
+        call_command(
+            'prune_demo_users',
+            '--apply',
+            '--permanent-clean',
+            '--no-ensure-canonical',
+            stdout=StringIO(),
+        )
+
+        self.assertTrue(User.objects.filter(username='117_Headcoachone').exists())
+        self.assertTrue(User.objects.filter(username='118_Headcoachtwo').exists())
+        self.assertTrue(User.objects.filter(username='119_Headcoachthree').exists())
+        self.assertTrue(User.objects.filter(username='120_Headcoachfour').exists())
+        self.assertTrue(User.objects.filter(username='121_Headcoachfive').exists())
+        self.assertTrue(User.objects.filter(username='045_Coachone').exists())
+        self.assertTrue(User.objects.filter(username='034_Coachtwo').exists())
+        self.assertTrue(User.objects.filter(username='088_Coachthree').exists())
+        self.assertTrue(User.objects.filter(username='013_Coachfour').exists())
+        self.assertTrue(User.objects.filter(username='000_Athlete1').exists())
+        for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
+            self.assertTrue(User.objects.filter(username=username, primary_coach__isnull=True).exists())
+        self.assertFalse(User.objects.filter(username='docker_UAT_coach_1').exists())
+        self.assertFalse(User.objects.filter(username='005_dockerUATAthlete1').exists())
+        self.assertFalse(User.objects.filter(username='Adminone').exists())
+        self.assertTrue(User.objects.filter(username='future_real_user').exists())
 
 
 class HeadAnalyticsEndpointTests(TestCase):

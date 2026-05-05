@@ -264,7 +264,7 @@ class ProgramCreateSerializer(serializers.ModelSerializer):
 
     def validate_athlete_id(self, value):
         try:
-            athlete = User.objects.get(id=value, user_type='athlete')
+            athlete = User.objects.get(id=value, user_type='athlete', is_active=True)
         except User.DoesNotExist:
             raise serializers.ValidationError('Selected athlete does not exist.')
         coach = self.context['request'].user
@@ -283,7 +283,7 @@ class ProgramCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         athlete_id = validated_data.pop('athlete_id')
-        athlete = User.objects.get(id=athlete_id, user_type='athlete')
+        athlete = User.objects.get(id=athlete_id, user_type='athlete', is_active=True)
         coach = self.context['request'].user
         name = validated_data.get('name', '')
         program_data = validated_data.get('program_data', default_program_data())
@@ -310,7 +310,7 @@ class ProgramUpdateSerializer(serializers.ModelSerializer):
 
     def validate_athlete_id(self, value):
         try:
-            athlete = User.objects.get(id=value, user_type='athlete')
+            athlete = User.objects.get(id=value, user_type='athlete', is_active=True)
         except User.DoesNotExist:
             raise serializers.ValidationError('Selected athlete does not exist.')
         coach = self.context['request'].user
@@ -330,7 +330,7 @@ class ProgramUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         athlete_id = validated_data.pop('athlete_id', None)
         if athlete_id is not None:
-            instance.athlete = User.objects.get(id=athlete_id, user_type='athlete')
+            instance.athlete = User.objects.get(id=athlete_id, user_type='athlete', is_active=True)
 
         for field, value in validated_data.items():
             setattr(instance, field, value)

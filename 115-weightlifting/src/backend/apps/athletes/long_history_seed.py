@@ -24,10 +24,13 @@ from .models import PersonalRecord, WorkoutLog
 
 User = get_user_model()
 
-# Mirrors tools/sim/populate_history.py so charts stay tier-distinct.
-# bodyweight_kg + gender for these usernames must match tools/sim/character_sim_profiles.py
-# (HTTP seed uses the same numbers for IWF class labels).
+# Includes the active Docker demo athlete plus archived legacy demo profiles.
+# The archived profiles remain only so old local data can be regenerated for analysis.
 ATHLETE_PROFILES: dict[str, dict] = {
+    '000_Athlete1': {
+        'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
+        'snatch': (118, 172), 'clean_jerk': (148, 212),
+    },
     'jon_snow': {
         'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
         'snatch': (118, 172), 'clean_jerk': (148, 212),
@@ -48,8 +51,7 @@ ATHLETE_PROFILES: dict[str, dict] = {
         'tier': 'advanced', 'bodyweight_kg': 71, 'gender': 'F',
         'snatch': (58, 86), 'clean_jerk': (72, 106),
     },
-    # Coachtwo / lord-of-the-rings roster (first five names). bodyweight_kg + gender
-    # must match tools/sim/character_sim_profiles.py.
+    # Archived legacy demo profiles retained for historical data regeneration.
     'frodo_baggins': {
         'tier': 'pro', 'bodyweight_kg': 58, 'gender': 'M',
         'snatch': (82, 98), 'clean_jerk': (100, 120),

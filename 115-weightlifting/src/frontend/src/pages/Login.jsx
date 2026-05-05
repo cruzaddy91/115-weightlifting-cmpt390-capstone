@@ -1,19 +1,31 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { login, register as apiRegister } from '../services/api'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  confirmPasswordReset,
+  login,
+  register as apiRegister,
+  requestPasswordReset,
+} from '../services/api'
 import { formatApiError } from '../utils/errors'
 import './Login.css'
 
 const Login = () => {
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [userType, setUserType] = useState('coach')
   const [coachSignupCode, setCoachSignupCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showRegister, setShowRegister] = useState(false)
+  const [searchParams] = useSearchParams()
+  const hasResetParams = searchParams.has('uid') && searchParams.has('token')
+  const [authMode, setAuthMode] = useState(hasResetParams ? 'reset' : 'login')
   const [registerSuccess, setRegisterSuccess] = useState('')
   const navigate = useNavigate()
+  const showRegister = authMode === 'register'
+  const showForgot = authMode === 'forgot'
+  const showReset = authMode === 'reset'
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -40,14 +52,59 @@ const Login = () => {
     setLoading(true)
 
     try {
+      if (userType === 'athlete' && username.includes('_')) {
+        setError('For athlete accounts, enter the base username without underscores. The system adds the numeric prefix.')
+        return
+      }
       const extras = userType === 'coach' ? { coach_signup_code: coachSignupCode } : {}
-      await apiRegister(username, password, userType, extras)
+      await apiRegister(username, email, password, userType, extras)
       setRegisterSuccess('Account created. You can log in now.')
-      setShowRegister(false)
+      setAuthMode('login')
+      setEmail('')
       setPassword('')
       setCoachSignupCode('')
     } catch (err) {
       setError(formatApiError(err, 'Registration failed.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePasswordResetRequest = async (event) => {
+    event.preventDefault()
+    setError('')
+    setRegisterSuccess('')
+    setLoading(true)
+
+    try {
+      await requestPasswordReset(email)
+      setRegisterSuccess('If that email exists, a reset link has been sent.')
+    } catch (err) {
+      setError(formatApiError(err, 'Password reset request failed.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePasswordResetConfirm = async (event) => {
+    event.preventDefault()
+    setError('')
+    setRegisterSuccess('')
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    setLoading(true)
+
+    try {
+      await confirmPasswordReset(searchParams.get('uid'), searchParams.get('token'), password)
+      setRegisterSuccess('Password reset. You can log in now.')
+      setAuthMode('login')
+      setPassword('')
+      setConfirmPassword('')
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setError(formatApiError(err, 'Password reset failed.'))
     } finally {
       setLoading(false)
     }
@@ -81,7 +138,9 @@ const Login = () => {
         <div className="login-card">
           <div className="login-card-frame">
             <div className="login-eyebrow">Role-aware access</div>
-            <h2>{showRegister ? 'Create account' : 'Log in'}</h2>
+            <h2>
+              {showRegister ? 'Create account' : showForgot ? 'Reset password' : showReset ? 'Choose new password' : 'Log in'}
+            </h2>
             <p className="login-subtitle">115 Weightlifting</p>
             {showRegister ? (
               <form onSubmit={handleRegister}>
@@ -91,9 +150,30 @@ const Login = () => {
                     id="reg-username"
                     type="text"
                     value={username}
-                    onChange={(event) => setUsername(event.target.value)}
+                    onChange={(event) => {
+                      const value = userType === 'athlete'
+                        ? event.target.value.replaceAll('_', '')
+                        : event.target.value
+                      setUsername(value)
+                    }}
                     required
                     autoComplete="username"
+                  />
+                  {userType === 'athlete' && (
+                    <p className="form-hint">
+                      Enter only the base athlete name. The system will assign the `000_`, `001_`, `002_` prefix.
+                    </p>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="reg-email">Email</label>
+                  <input
+                    id="reg-email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    autoComplete="email"
                   />
                 </div>
                 <div className="form-group">
@@ -138,6 +218,60 @@ const Login = () => {
                   {loading ? 'Creating...' : 'Create account'}
                 </button>
               </form>
+            ) : showForgot ? (
+              <form onSubmit={handlePasswordResetRequest}>
+                <div className="form-group">
+                  <label htmlFor="reset-email">Account email</label>
+                  <input
+                    id="reset-email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+                <p className="form-hint">
+                  If this email belongs to an account, a reset link will be sent. In local Docker, the link prints in backend logs.
+                </p>
+                {error && <div className="login-error">{error}</div>}
+                {registerSuccess && <div className="login-success">{registerSuccess}</div>}
+                <button type="submit" className="login-btn" disabled={loading}>
+                  {loading ? 'Sending...' : 'Send reset link'}
+                </button>
+              </form>
+            ) : showReset ? (
+              <form onSubmit={handlePasswordResetConfirm}>
+                <div className="form-group">
+                  <label htmlFor="new-password">New password</label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="confirm-new-password">Confirm new password</label>
+                  <input
+                    id="confirm-new-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                  />
+                </div>
+                {error && <div className="login-error">{error}</div>}
+                {registerSuccess && <div className="login-success">{registerSuccess}</div>}
+                <button type="submit" className="login-btn" disabled={loading}>
+                  {loading ? 'Resetting...' : 'Reset password'}
+                </button>
+              </form>
             ) : (
               <form onSubmit={handleLogin}>
                 <div className="form-group">
@@ -167,13 +301,18 @@ const Login = () => {
                 <button type="submit" className="login-btn" disabled={loading}>
                   {loading ? 'Logging in...' : 'Log in'}
                 </button>
+                <p className="login-register">
+                  <button type="button" className="link-btn" onClick={() => { setAuthMode('forgot'); setError(''); setRegisterSuccess('') }}>Forgot password?</button>
+                </p>
               </form>
             )}
             <p className="login-register">
               {showRegister ? (
-                <>Already have an account? <button type="button" className="link-btn" onClick={() => { setShowRegister(false); setError(''); setRegisterSuccess('') }}>Log in</button></>
+                <>Already have an account? <button type="button" className="link-btn" onClick={() => { setAuthMode('login'); setError(''); setRegisterSuccess('') }}>Log in</button></>
+              ) : showForgot || showReset ? (
+                <>Remembered it? <button type="button" className="link-btn" onClick={() => { setAuthMode('login'); setError(''); setRegisterSuccess('') }}>Log in</button></>
               ) : (
-                <>No account? <button type="button" className="link-btn" onClick={() => { setShowRegister(true); setError(''); setRegisterSuccess('') }}>Register</button></>
+                <>No account? <button type="button" className="link-btn" onClick={() => { setAuthMode('register'); setError(''); setRegisterSuccess('') }}>Register</button></>
               )}
             </p>
           </div>

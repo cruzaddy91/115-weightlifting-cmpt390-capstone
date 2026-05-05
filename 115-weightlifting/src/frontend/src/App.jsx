@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Navigate, Route, Routes, Link, useLocation } from 'react-router-dom'
 import AthleteDashboard from './pages/AthleteDashboard'
 import CoachDashboard from './pages/CoachDashboard'
+import HeadCoachCategoryPage from './pages/HeadCoachCategoryPage'
 import HeadCoachDashboard from './pages/HeadCoachDashboard'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -108,7 +109,7 @@ const Navigation = () => {
           <div className="nav-links">
             {!currentUser && <Link to="/login" className={location.pathname === '/login' ? 'active' : ''}>Log in</Link>}
             {currentUser?.user_type === 'head_coach' && (
-              <Link to="/head" className={location.pathname === '/head' ? 'active' : ''}>Head</Link>
+              <Link to="/head" className={location.pathname.startsWith('/head') ? 'active' : ''}>Head</Link>
             )}
             {(currentUser?.user_type === 'coach' || currentUser?.user_type === 'head_coach') && (
               <Link to="/coach" className={location.pathname === '/coach' ? 'active' : ''}>Coach</Link>
@@ -372,9 +373,14 @@ function App() {
             path="/login"
             element={isAuthenticated() ? <Navigate to={getDefaultRouteForUser()} replace /> : <Login />}
           />
+          <Route path="/reset-password" element={<Login />} />
           <Route
             path="/head"
             element={<ProtectedRoute roles={['head_coach']}><HeadCoachDashboard /></ProtectedRoute>}
+          />
+          <Route
+            path="/head/categories/:prefix"
+            element={<ProtectedRoute roles={['head_coach']}><HeadCoachCategoryPage /></ProtectedRoute>}
           />
           <Route
             path="/coach"

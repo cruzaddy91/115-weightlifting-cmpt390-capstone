@@ -36,22 +36,22 @@ def _coached_athlete_ids(user, request=None):
         staff_ids = list(staff_coach_queryset(user).values_list('id', flat=True))
         org_ids = [user.id, *staff_ids]
         from_programs = set(
-            TrainingProgram.objects.filter(Q(coach=user) | Q(coach_id__in=staff_ids))
+            TrainingProgram.objects.filter(Q(coach=user) | Q(coach_id__in=staff_ids), athlete__is_active=True)
             .values_list('athlete_id', flat=True)
             .distinct()
         )
         from_primary = set(
-            User.objects.filter(user_type='athlete', primary_coach_id__in=org_ids).values_list(
+            User.objects.filter(user_type='athlete', is_active=True, primary_coach_id__in=org_ids).values_list(
                 'id', flat=True
             )
         )
         athlete_ids = from_programs | from_primary
     else:
         from_programs = set(
-            TrainingProgram.objects.filter(coach=user).values_list('athlete_id', flat=True).distinct()
+            TrainingProgram.objects.filter(coach=user, athlete__is_active=True).values_list('athlete_id', flat=True).distinct()
         )
         from_primary = set(
-            User.objects.filter(user_type='athlete', primary_coach=user).values_list('id', flat=True)
+            User.objects.filter(user_type='athlete', is_active=True, primary_coach=user).values_list('id', flat=True)
         )
         athlete_ids = from_programs | from_primary
     if request is not None:
@@ -129,7 +129,7 @@ class PersonalRecordListCreate(APIView):
 
 class ProgramCompletionDetail(APIView):
     def get(self, request, program_id):
-        program = get_object_or_404(TrainingProgram, id=program_id)
+        program = get_object_or_404(TrainingProgram, id=program_id, athlete__is_active=True)
 
         if request.user.user_type == 'athlete':
             if program.athlete_id != request.user.id:
@@ -172,7 +172,7 @@ class ProgramCompletionDetail(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        program = get_object_or_404(TrainingProgram, id=program_id, athlete=request.user)
+        program = get_object_or_404(TrainingProgram, id=program_id, athlete=request.user, athlete__is_active=True)
         completion, _ = ProgramCompletion.objects.get_or_create(program=program, athlete=request.user)
         serializer = ProgramCompletionUpdateSerializer(completion, data=request.data, partial=True)
         if serializer.is_valid():

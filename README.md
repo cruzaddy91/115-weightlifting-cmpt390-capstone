@@ -32,11 +32,17 @@ Suggested walkthrough accounts:
 
 | Role | Username | URL |
 | --- | --- | --- |
-| Head coach | `Headcoachone` | <http://localhost:4173/head> |
-| Line coach | `Coachone` | <http://localhost:4173/coach> |
-| Athlete | `jon_snow` | <http://localhost:4173/athlete> |
+| GM head coach | `117_Headcoachone` | <http://localhost:4173/head> |
+| Standalone head coaches | `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachfive` | <http://localhost:4173/head> |
+| Primary line coach | `045_Coachone` | <http://localhost:4173/coach> |
+| Demo line coaches | `034_Coachtwo`, `088_Coachthree`, `013_Coachfour` | <http://localhost:4173/coach> |
+| Athlete | `000_Athlete1` | <http://localhost:4173/athlete> |
+| Unassigned athletes | `005_Athlete2` through `020_Athlete16`, skipping `013_` because it belongs to `013_Coachfour` | <http://localhost:4173/athlete> |
 
-The `jon_snow` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
+The `000_Athlete1` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
+The 15 unassigned athlete accounts are intentionally active with no accountable coach so the GM dashboard can exercise manual assignment to either a head coach or a line coach. They display with the `XXX_UNASSIGNED` organization tag until assigned.
+
+New accounts require a unique email address. Athlete registration accepts a base username and assigns the next available normal member prefix automatically (`000_`, then `005_` through `099_`). Line coaches must select an available normal member prefix from that same pool. Reserved GM/AGM organization prefixes (`001_`, `002_`, `003_`, `004_`, and `117_`) are blocked for normal coach and athlete accounts. Head coaches outside the `117` and `001-004` category lanes display with the `XXX_UNASSIGNED` organization tag until intentionally provisioned. Password reset is available from the login screen; in this Docker/local review build, reset emails are printed to backend logs instead of sent through a real SMTP provider.
 
 ## Access Control Expectations
 
@@ -92,9 +98,12 @@ The harness:
 - starts the Postgres, backend, and frontend containers;
 - waits for backend and frontend readiness;
 - verifies the seeded demo accounts;
+- runs SSVC cleanup so old Docker/UAT/demo leftovers are permanently removed while canonical demo users remain;
 - runs an API UAT flow for program creation, assignment, completion, workout logs, PRs, and Sinclair analytics;
+- verifies email uniqueness and the password-reset flow;
 - checks RBAC denial paths for cross-coach and cross-athlete access;
-- runs auth stress cycles for `Coachone` and `jon_snow`.
+- verifies category/color metadata for the head-coach roster;
+- runs auth stress cycles for `045_Coachone` and `000_Athlete1`.
 
 Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.
 

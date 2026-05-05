@@ -200,6 +200,16 @@ CORS_ALLOW_CREDENTIALS = True
 HEAD_RECOMMENDER_MODE = os.getenv('HEAD_RECOMMENDER_MODE', 'rule').strip().lower()
 HEAD_RECOMMENDER_ARTIFACT_DIR = os.getenv('HEAD_RECOMMENDER_ARTIFACT_DIR', '')
 
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '115 Weightlifting <noreply@example.invalid>')
+PASSWORD_RESET_FRONTEND_URL = os.getenv('PASSWORD_RESET_FRONTEND_URL', 'http://localhost:4173/reset-password')
+PASSWORD_RESET_DEBUG_RESPONSE = os.getenv('PASSWORD_RESET_DEBUG_RESPONSE', 'False').strip().lower() in (
+    '1',
+    'true',
+    'yes',
+    'on',
+)
+
 # --- Production TLS / proxy hardening -----------------------------------
 # When DEBUG=False we assume the app sits behind a TLS-terminating proxy
 # (Caddy, nginx, a load balancer) that sets X-Forwarded-Proto. Without this

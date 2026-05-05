@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  deleteHeadAthlete,
+  deleteHeadCoach,
+  deleteHeadStaff,
   getHeadProgramNameOutcomes,
   getHeadModelStatus,
   getHeadOrgRoster,
@@ -8,24 +11,116 @@ import {
   getHeadProgramStyleOutcomes,
   getHeadRecommendations,
   patchHeadAthletePrimaryCoach,
-  patchHeadStaffLink,
+  patchHeadCoachCategory,
+  patchHeadStaffAssignment,
   postHeadStaffInvite,
 } from '../services/api'
 import { getCurrentUser } from '../utils/auth'
 import { formatApiError } from '../utils/errors'
 import './HeadCoachDashboard.css'
 
+const COACH_ACCENT_CLASSES = [
+  'olive-drab',
+  'od-green',
+  'steel-blue',
+  'slate-gray',
+  'burnt-umber',
+  'brass',
+  'muted-crimson',
+  'desert-brown',
+  'dark-teal',
+  'graphite',
+]
+const SHOW_HEAD_ANALYTICS = false
+const EXPECTED_STANDALONE_HEAD_SUFFIXES = ['Headcoachtwo', 'Headcoachthree', 'Headcoachfour', 'Headcoachfive']
+const EXPECTED_LINE_COACHES = ['045_Coachone', '034_Coachtwo', '088_Coachthree', '013_Coachfour']
+const EXPECTED_PRIMARY_ATHLETE = '000_Athlete1'
+const EXPECTED_PRIMARY_COACH = '045_Coachone'
+const EXPECTED_UNASSIGNED_ATHLETES = [
+  '005_Athlete2',
+  '006_Athlete3',
+  '007_Athlete4',
+  '008_Athlete5',
+  '009_Athlete6',
+  '010_Athlete7',
+  '011_Athlete8',
+  '012_Athlete9',
+  '014_Athlete10',
+  '015_Athlete11',
+  '016_Athlete12',
+  '017_Athlete13',
+  '018_Athlete14',
+  '019_Athlete15',
+  '020_Athlete16',
+]
+const AGM_CATEGORY_OPTIONS = [
+  { prefix: 'XXX_UNASSIGNED', label: 'XXX_UNASSIGNED' },
+  { prefix: '001', label: '001_INFINITY' },
+  { prefix: '002', label: '002_REACH' },
+  { prefix: '003', label: '003_FORERUNNER' },
+  { prefix: '004', label: '004_ODST' },
+]
+const HEAD_CATEGORY_LINKS = [
+  {
+    prefix: '117',
+    label: '117_MASTER_CHIEF',
+    username: '117_Headcoachone',
+    status: 'Global admin: the boss',
+    colorKey: 'sage-green',
+    to: '/head',
+  },
+  {
+    prefix: '001',
+    label: '001_INFINITY',
+    username: 'UNASSIGNED',
+    status: 'Empty assistant-manager template',
+    colorKey: 'gun-silver',
+    to: '/head/categories/001',
+  },
+  {
+    prefix: '002',
+    label: '002_REACH',
+    username: 'UNASSIGNED',
+    status: 'Empty assistant-manager template',
+    colorKey: 'shell-copper',
+    to: '/head/categories/002',
+  },
+  {
+    prefix: '003',
+    label: '003_FORERUNNER',
+    username: 'UNASSIGNED',
+    status: 'Empty assistant-manager template',
+    colorKey: 'sand-tan',
+    to: '/head/categories/003',
+  },
+  {
+    prefix: '004',
+    label: '004_ODST',
+    username: 'UNASSIGNED',
+    status: 'Empty assistant-manager template',
+    colorKey: 'steel-blue',
+    to: '/head/categories/004',
+  },
+]
+
 const HeadCoachDashboard = () => {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const [roster, setRoster] = useState({ staff: [], athletes: [] })
+  const [roster, setRoster] = useState({ staff: [], headCoaches: [], athletes: [] })
   const [rosterLoading, setRosterLoading] = useState(true)
   const [rosterError, setRosterError] = useState('')
+  const [activeHeadCategory, setActiveHeadCategory] = useState('117')
   const [inviteUsername, setInviteUsername] = useState('')
   const [assignBusy, setAssignBusy] = useState(false)
   const [assignMessage, setAssignMessage] = useState('')
+  const [headCoachReassignId, setHeadCoachReassignId] = useState(null)
+  const [headCoachTargetPrefix, setHeadCoachTargetPrefix] = useState('')
+  const [staffReassignId, setStaffReassignId] = useState(null)
+  const [staffTargetId, setStaffTargetId] = useState('')
+  const [athleteReassignId, setAthleteReassignId] = useState(null)
+  const [athleteTargetId, setAthleteTargetId] = useState('')
   const [analytics, setAnalytics] = useState({
     styleGroups: [],
     nameGroups: [],
@@ -41,6 +136,10 @@ const HeadCoachDashboard = () => {
 
   const headUser = getCurrentUser()
   const headId = headUser?.id
+  const selectedHeadCategory = useMemo(
+    () => HEAD_CATEGORY_LINKS.find((category) => category.prefix === activeHeadCategory) || HEAD_CATEGORY_LINKS[0],
+    [activeHeadCategory]
+  )
   const summaryTotals = useMemo(() => {
     const totals = {
       coaches: rows.length,
@@ -48,8 +147,8 @@ const HeadCoachDashboard = () => {
       programs: 0,
       prs: 0,
       workoutLogs: 0,
-      styleGroups: analytics.styleGroups.length,
-      recommendationCount: analytics.recommendations.length,
+      styleGroups: SHOW_HEAD_ANALYTICS ? analytics.styleGroups.length : 0,
+      recommendationCount: SHOW_HEAD_ANALYTICS ? analytics.recommendations.length : 0,
     }
     for (const row of rows) {
       totals.athletes += Number(row.athlete_count || 0)
@@ -78,6 +177,7 @@ const HeadCoachDashboard = () => {
       .then((data) => {
         setRoster({
           staff: data.staff || [],
+          headCoaches: data.head_coaches || [],
           athletes: data.athletes || [],
         })
         setRosterError('')
@@ -88,6 +188,7 @@ const HeadCoachDashboard = () => {
   }, [])
 
   const loadAnalytics = () => {
+    if (!SHOW_HEAD_ANALYTICS) return Promise.resolve()
     return Promise.all([
       getHeadProgramStyleOutcomes(),
       getHeadProgramNameOutcomes(),
@@ -133,13 +234,121 @@ const HeadCoachDashboard = () => {
   const coachOptions = () => {
     if (!headId) return []
     const opts = [{ id: headId, label: `@${headUser?.username || 'you'} (head)` }]
-    roster.staff.forEach((s) => {
+    roster.staff.filter((s) => s.reports_to_id === headId).forEach((s) => {
       opts.push({ id: s.id, label: `@${s.username} (line)` })
     })
     return opts
   }
 
+  const headCoachOptions = () => {
+    if (roster.headCoaches.length > 0) {
+      return roster.headCoaches.map((h) => ({ id: h.id, label: `@${h.username}` }))
+    }
+    return headId ? [{ id: headId, label: `@${headUser?.username || 'you'}` }] : []
+  }
+
+  const availableAgmCategoryOptions = (currentHeadCoach) => {
+    const occupied = new Set(
+      roster.headCoaches
+        .filter((h) => h.id !== currentHeadCoach.id && AGM_CATEGORY_OPTIONS.some((opt) => opt.prefix === h.org_prefix))
+        .map((h) => h.org_prefix)
+    )
+    return AGM_CATEGORY_OPTIONS.filter((opt) => opt.prefix === 'XXX_UNASSIGNED' || !occupied.has(opt.prefix))
+  }
+
   const refreshAll = () => Promise.all([loadSummary(), loadRoster(), loadAnalytics()])
+
+  const renderOrgBadge = (row) => {
+    if (!row?.org_label) return null
+    return (
+      <span className={`head-org-badge head-org-${row.org_color_key || 'graphite'}`}>
+        {row.org_label}
+      </span>
+    )
+  }
+
+  const validateProvisioning = () => {
+    const headByUsername = new Map(roster.headCoaches.map((h) => [h.username, h]))
+    const staffByUsername = new Map(roster.staff.map((s) => [s.username, s]))
+    const athleteByUsername = new Map(roster.athletes.map((a) => [a.username, a]))
+    const missingHeads = []
+    if (!headByUsername.has('117_Headcoachone')) missingHeads.push('117_Headcoachone')
+    const managedHeads = EXPECTED_STANDALONE_HEAD_SUFFIXES.map((suffix) => (
+      roster.headCoaches.find((h) => h.username.endsWith(`_${suffix}`))
+    ))
+    managedHeads.forEach((row, idx) => {
+      if (!row) missingHeads.push(`XXX_${EXPECTED_STANDALONE_HEAD_SUFFIXES[idx]}`)
+    })
+    const missingLineCoaches = EXPECTED_LINE_COACHES.filter((username) => !staffByUsername.has(username))
+    const invalidHeadTags = managedHeads.filter(Boolean).filter((row) => (
+      row.org_label !== 'XXX_UNASSIGNED' && !AGM_CATEGORY_OPTIONS.some((opt) => opt.prefix === row.org_prefix)
+    ))
+    const unassignedLineCoaches = EXPECTED_LINE_COACHES.filter((username) => {
+      const row = staffByUsername.get(username)
+      return !row || row.reports_to_username !== '117_Headcoachone'
+    })
+    const athlete = athleteByUsername.get(EXPECTED_PRIMARY_ATHLETE)
+    const invalidUnassignedAthletes = EXPECTED_UNASSIGNED_ATHLETES.filter((username) => {
+      const row = athleteByUsername.get(username)
+      return !row || row.primary_coach_id !== null || row.org_label !== 'XXX_UNASSIGNED'
+    })
+
+    if (missingHeads.length > 0) {
+      window.alert(`Error: missing head coaches: ${missingHeads.join(', ')}`)
+      return
+    }
+    if (invalidHeadTags.length > 0) {
+      window.alert(`Error: expected XXX_UNASSIGNED or AGM tags for: ${invalidHeadTags.map((row) => row.username).join(', ')}`)
+      return
+    }
+    if (missingLineCoaches.length > 0) {
+      window.alert(`Error: missing line coaches: ${missingLineCoaches.join(', ')}`)
+      return
+    }
+    if (unassignedLineCoaches.length > 0) {
+      window.alert(`Error: line coaches not assigned to @117_Headcoachone: ${unassignedLineCoaches.join(', ')}`)
+      return
+    }
+    if (!athlete || athlete.primary_coach_username !== EXPECTED_PRIMARY_COACH) {
+      window.alert(`Error: ${EXPECTED_PRIMARY_ATHLETE} is not assigned to @${EXPECTED_PRIMARY_COACH}`)
+      return
+    }
+    if (invalidUnassignedAthletes.length > 0) {
+      window.alert(`Error: expected these athletes to be XXX_UNASSIGNED: ${invalidUnassignedAthletes.join(', ')}`)
+      return
+    }
+    window.alert('Good to go! Head coaches, line coaches, category tags, athlete assignment, and unassigned athlete pool are provisioned.')
+  }
+
+  const beginHeadCoachReassign = (headCoach) => {
+    setHeadCoachReassignId(headCoach.id)
+    setHeadCoachTargetPrefix(headCoach.org_prefix && headCoach.org_prefix !== '117' ? headCoach.org_prefix : 'XXX_UNASSIGNED')
+  }
+
+  const cancelHeadCoachReassign = () => {
+    setHeadCoachReassignId(null)
+    setHeadCoachTargetPrefix('')
+  }
+
+  const beginStaffReassign = (staff) => {
+    setStaffReassignId(staff.id)
+    setStaffTargetId(staff.reports_to_id ?? '')
+  }
+
+  const cancelStaffReassign = () => {
+    setStaffReassignId(null)
+    setStaffTargetId('')
+  }
+
+  const beginAthleteReassign = (athlete) => {
+    setAthleteReassignId(athlete.id)
+    setAthleteTargetId(athlete.primary_coach_id ?? '')
+  }
+
+  const cancelAthleteReassign = () => {
+    setAthleteReassignId(null)
+    setAthleteTargetId('')
+  }
 
   const handleInvite = async (e) => {
     e.preventDefault()
@@ -159,30 +368,99 @@ const HeadCoachDashboard = () => {
     }
   }
 
-  const handleUnlinkStaff = async (userId, username) => {
-    if (!window.confirm(`Remove @${username} from your org?`)) return
+  const handleAssignStaff = async (userId, username) => {
     setAssignBusy(true)
     setAssignMessage('')
     try {
-      await patchHeadStaffLink(userId, false)
-      setAssignMessage(`Removed @${username}.`)
+      await patchHeadStaffAssignment(userId, staffTargetId === '' ? null : Number(staffTargetId))
+      setAssignMessage(staffTargetId === '' ? `Moved @${username} to unaffiliated.` : `Assigned @${username}.`)
+      cancelStaffReassign()
       await refreshAll()
     } catch (err) {
-      setAssignMessage(formatApiError(err, 'Could not remove coach.'))
+      setAssignMessage(formatApiError(err, 'Could not assign coach.'))
     } finally {
       setAssignBusy(false)
     }
   }
 
-  const handleAthleteCoachChange = async (athleteId, primaryCoachId) => {
+  const handleAssignHeadCoach = async (userId, username) => {
+    if (!headCoachTargetPrefix) {
+      setAssignMessage('Choose an AGM category before assigning this head coach.')
+      return
+    }
     setAssignBusy(true)
     setAssignMessage('')
     try {
-      await patchHeadAthletePrimaryCoach(athleteId, Number(primaryCoachId))
-      setAssignMessage('Athlete coach updated.')
+      const result = await patchHeadCoachCategory(userId, headCoachTargetPrefix)
+      const action = result.org_label === 'XXX_UNASSIGNED' ? 'Moved' : 'Assigned'
+      setAssignMessage(`${action} @${username} to ${result.org_label}. New username: @${result.username}.`)
+      cancelHeadCoachReassign()
+      await refreshAll()
+    } catch (err) {
+      setAssignMessage(formatApiError(err, 'Could not assign head coach category.'))
+    } finally {
+      setAssignBusy(false)
+    }
+  }
+
+  const handleDeleteHeadCoach = async (userId, username) => {
+    if (!window.confirm(`Delete head coach @${username}? The account will be blocked and recoverable for 30 days.`)) return
+    setAssignBusy(true)
+    setAssignMessage('')
+    try {
+      await deleteHeadCoach(userId)
+      setAssignMessage(`Deleted head coach @${username}. Account is recoverable for 30 days.`)
+      cancelHeadCoachReassign()
+      await refreshAll()
+    } catch (err) {
+      setAssignMessage(formatApiError(err, 'Could not delete head coach.'))
+    } finally {
+      setAssignBusy(false)
+    }
+  }
+
+  const handleDeleteStaff = async (userId, username) => {
+    if (!window.confirm(`Delete coach @${username}? The account will be blocked and recoverable for 30 days.`)) return
+    setAssignBusy(true)
+    setAssignMessage('')
+    try {
+      await deleteHeadStaff(userId)
+      setAssignMessage(`Deleted coach @${username}. Account is recoverable for 30 days.`)
+      cancelStaffReassign()
+      await refreshAll()
+    } catch (err) {
+      setAssignMessage(formatApiError(err, 'Could not delete coach.'))
+    } finally {
+      setAssignBusy(false)
+    }
+  }
+
+  const handleAthleteCoachChange = async (athleteId, primaryCoachId, username = 'athlete') => {
+    setAssignBusy(true)
+    setAssignMessage('')
+    try {
+      const target = primaryCoachId === '' ? null : Number(primaryCoachId)
+      await patchHeadAthletePrimaryCoach(athleteId, target)
+      setAssignMessage(target == null ? `Moved @${username} to unaffiliated.` : `Assigned @${username}.`)
+      cancelAthleteReassign()
       await refreshAll()
     } catch (err) {
       setAssignMessage(formatApiError(err, 'Could not update athlete coach.'))
+    } finally {
+      setAssignBusy(false)
+    }
+  }
+
+  const handleDeleteAthlete = async (athleteId, username) => {
+    if (!window.confirm(`Delete @${username}? The account will be blocked and recoverable for 30 days.`)) return
+    setAssignBusy(true)
+    setAssignMessage('')
+    try {
+      await deleteHeadAthlete(athleteId)
+      setAssignMessage(`Deleted @${username}. Account is recoverable for 30 days.`)
+      await refreshAll()
+    } catch (err) {
+      setAssignMessage(formatApiError(err, 'Could not delete athlete.'))
     } finally {
       setAssignBusy(false)
     }
@@ -216,10 +494,12 @@ const HeadCoachDashboard = () => {
           <span className="label">Programs tracked</span>
           <span className="value data">{summaryTotals.programs}</span>
         </article>
-        <article className="home-metric section-card">
-          <span className="label">Recommendation cards</span>
-          <span className="value data">{summaryTotals.recommendationCount}</span>
-        </article>
+        {SHOW_HEAD_ANALYTICS && (
+          <article className="home-metric section-card">
+            <span className="label">Recommendation cards</span>
+            <span className="value data">{summaryTotals.recommendationCount}</span>
+          </article>
+        )}
         <article className="home-metric section-card">
           <span className="label">Programs with PR data</span>
           <span className="value data">{summaryTotals.prs}</span>
@@ -262,6 +542,7 @@ const HeadCoachDashboard = () => {
         </div>
       )}
 
+      {SHOW_HEAD_ANALYTICS && (
       <section className="head-model-strip section-card" aria-labelledby="head-model-strip-title">
         <div>
           <h2 id="head-model-strip-title">Recommendation engine</h2>
@@ -302,7 +583,9 @@ const HeadCoachDashboard = () => {
           </p>
         )}
       </section>
+      )}
 
+      {SHOW_HEAD_ANALYTICS && (
       <section className="head-analytics-section section-card" aria-labelledby="head-analytics-heading">
         <h2 id="head-analytics-heading" className="head-assign-title">De-identified analytics</h2>
         <p className="head-assign-lede">
@@ -387,11 +670,12 @@ const HeadCoachDashboard = () => {
           )}
         </div>
       </section>
+      )}
 
       <section className="head-assign-section section-card" aria-labelledby="head-assign-heading">
         <h2 id="head-assign-heading" className="head-assign-title">Assignments</h2>
         <p className="head-assign-lede">
-          Add line coaches by username. Set each athlete&apos;s accountable coach (you or a line coach under you).
+          Add line coaches by username or claim available coaches. Set each athlete&apos;s accountable coach.
         </p>
 
         {rosterLoading && <p className="head-dashboard-status">Loading roster…</p>}
@@ -421,61 +705,349 @@ const HeadCoachDashboard = () => {
             </form>
 
             <div className="head-assign-card">
-              <h3>Line coaches</h3>
-              {roster.staff.length === 0 ? (
-                <p className="head-assign-empty">No line coaches yet.</p>
-              ) : (
-                <ul className="head-assign-list">
-                  {roster.staff.map((s) => (
-                    <li key={s.id}>
-                      <span className="username-highlight">@{s.username}</span>
+              <h3>Head coach categories</h3>
+              <div className="head-file-cabinet">
+                <div className="head-file-tabs" role="tablist" aria-label="Head coach category files">
+                {HEAD_CATEGORY_LINKS.map((category) => (
+                  <button
+                    key={category.prefix}
+                    type="button"
+                    className={`head-file-tab ${activeHeadCategory === category.prefix ? 'active' : ''}`}
+                    role="tab"
+                    aria-selected={activeHeadCategory === category.prefix}
+                    aria-controls="head-category-panel"
+                    onClick={() => setActiveHeadCategory(category.prefix)}
+                  >
+                    {category.label}
+                  </button>
+                ))}
+                </div>
+                <div
+                  id="head-category-panel"
+                  className={`head-file-panel head-file-panel-${selectedHeadCategory.colorKey}`}
+                  role="tabpanel"
+                >
+                  <div className="head-file-panel-summary">
+                    <span className={`head-org-badge head-org-${selectedHeadCategory.colorKey}`}>
+                      {selectedHeadCategory.label}
+                    </span>
+                    <span className="head-file-panel-title">
+                      {selectedHeadCategory.username === 'UNASSIGNED'
+                        ? selectedHeadCategory.username
+                        : `@${selectedHeadCategory.username}`}
+                    </span>
+                    <span className="head-file-panel-meta">{selectedHeadCategory.status}</span>
+                    {selectedHeadCategory.prefix === '117' && (
                       <button
                         type="button"
-                        className="head-btn-danger"
-                        disabled={assignBusy}
-                        onClick={() => handleUnlinkStaff(s.id, s.username)}
+                        className="head-btn-secondary head-provision-check"
+                        onClick={validateProvisioning}
                       >
-                        Remove
+                        Validate provisioning
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                    )}
+                  </div>
 
-            <div className="head-assign-card">
-              <h3>Athletes</h3>
-              {roster.athletes.length === 0 ? (
-                <p className="head-assign-empty">No athletes in your org yet (set primary coach).</p>
-              ) : (
-                <table className="head-table head-athlete-table">
-                  <thead>
-                    <tr>
-                      <th>Athlete</th>
-                      <th>Accountable coach</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roster.athletes.map((a) => (
-                      <tr key={a.id}>
-                        <td><span className="username-highlight">@{a.username}</span></td>
-                        <td>
-                          <select
-                            className="head-coach-select"
-                            value={a.primary_coach_id ?? ''}
-                            disabled={assignBusy || !headId}
-                            onChange={(ev) => handleAthleteCoachChange(a.id, ev.target.value)}
-                          >
-                            {coachOptions().map((opt) => (
-                              <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  {selectedHeadCategory.prefix === '117' ? (
+                    <div className="head-file-dashboard">
+                      <div className="head-assign-card">
+                        <h3>Head coaches</h3>
+                        {roster.headCoaches.length === 0 ? (
+                          <p className="head-assign-empty">No head coach accounts yet.</p>
+                        ) : (
+                          <table className="head-table head-head-table">
+                            <thead>
+                              <tr>
+                                <th>Head coach</th>
+                                <th>Category tag</th>
+                                <th>Status</th>
+                                <th className="head-actions-col">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {roster.headCoaches.map((h) => (
+                                <tr key={h.id}>
+                                  <td className="head-head-person-cell">
+                                    <span className="head-identity">
+                                      <span className="username-highlight">@{h.username}</span>
+                                    </span>
+                                  </td>
+                                  <td className="head-category-cell">{renderOrgBadge(h)}</td>
+                                  <td className="head-status-cell">
+                                    {h.org_prefix === '117' ? 'GM Head Coach' : h.org_prefix ? 'AGM Head Coach' : 'Unaffiliated'}
+                                  </td>
+                                  {h.org_prefix === '117' ? (
+                                    <td className="head-actions-cell">
+                                      <span className="head-muted-action">Locked</span>
+                                    </td>
+                                  ) : headCoachReassignId === h.id ? (
+                                    <td className="head-actions-cell">
+                                      <span className="head-athlete-actions">
+                                        <select
+                                          className="head-coach-select"
+                                          value={headCoachTargetPrefix}
+                                          disabled={assignBusy}
+                                          onChange={(ev) => setHeadCoachTargetPrefix(ev.target.value)}
+                                        >
+                                          <option value="">Choose category</option>
+                                          {availableAgmCategoryOptions(h).map((opt) => (
+                                            <option key={opt.prefix} value={opt.prefix}>{opt.label}</option>
+                                          ))}
+                                        </select>
+                                        <button
+                                          type="button"
+                                          className="head-btn-primary"
+                                          disabled={assignBusy || !headCoachTargetPrefix}
+                                          onClick={() => handleAssignHeadCoach(h.id, h.username)}
+                                        >
+                                          Assign
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="head-btn-secondary"
+                                          disabled={assignBusy}
+                                          onClick={cancelHeadCoachReassign}
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="head-btn-danger"
+                                          disabled={assignBusy}
+                                          onClick={() => handleDeleteHeadCoach(h.id, h.username)}
+                                        >
+                                          Delete
+                                        </button>
+                                      </span>
+                                    </td>
+                                  ) : (
+                                    <td className="head-actions-cell">
+                                      <span className="head-athlete-actions">
+                                        <button
+                                          type="button"
+                                          className="head-btn-warning"
+                                          disabled={assignBusy}
+                                          onClick={() => beginHeadCoachReassign(h)}
+                                        >
+                                          {h.org_prefix ? 'Reassign' : 'Assign'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="head-btn-danger"
+                                          disabled={assignBusy}
+                                          onClick={() => handleDeleteHeadCoach(h.id, h.username)}
+                                        >
+                                          Delete
+                                        </button>
+                                      </span>
+                                    </td>
+                                  )}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+
+                      <div className="head-assign-card">
+                        <h3>Line coaches</h3>
+                        {roster.staff.length === 0 ? (
+                          <p className="head-assign-empty">No line coaches or available coach accounts yet.</p>
+                        ) : (
+                          <table className="head-table head-roster-table">
+                            <thead>
+                              <tr>
+                                <th>Line coach</th>
+                                <th>Accountable coach</th>
+                                <th className="head-actions-col">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                            {roster.staff.map((s, idx) => (
+                              <tr
+                                key={s.id}
+                                className={`head-coach-row head-coach-accent-${COACH_ACCENT_CLASSES[idx % COACH_ACCENT_CLASSES.length]}`}
+                              >
+                                <td className="head-roster-person-cell">
+                                  <span className="head-identity">
+                                    <span className="username-highlight">@{s.username}</span>
+                                    {renderOrgBadge(s)}
+                                  </span>
+                                </td>
+                                <td className="head-accountable-cell">
+                                  {s.reports_to_id ? `@${s.reports_to_username || s.reports_to_id}` : 'Unaffiliated'}
+                                </td>
+                                {staffReassignId === s.id ? (
+                                  <td className="head-actions-cell">
+                                    <span className="head-athlete-actions">
+                                    <select
+                                      className="head-coach-select"
+                                      value={staffTargetId}
+                                      disabled={assignBusy}
+                                      onChange={(ev) => setStaffTargetId(ev.target.value)}
+                                    >
+                                      <option value="">Unaffiliated</option>
+                                      {headCoachOptions().map((opt) => (
+                                        <option key={opt.id} value={opt.id}>{opt.label}</option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      className="head-btn-primary"
+                                      disabled={assignBusy}
+                                      onClick={() => handleAssignStaff(s.id, s.username)}
+                                    >
+                                      Assign
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="head-btn-secondary"
+                                      disabled={assignBusy}
+                                      onClick={cancelStaffReassign}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="head-btn-danger"
+                                      disabled={assignBusy}
+                                      onClick={() => handleDeleteStaff(s.id, s.username)}
+                                    >
+                                      Delete
+                                    </button>
+                                    </span>
+                                  </td>
+                                ) : (
+                                  <td className="head-actions-cell">
+                                    <span className="head-athlete-actions">
+                                    <button
+                                      type="button"
+                                      className="head-btn-warning"
+                                      disabled={assignBusy}
+                                      onClick={() => beginStaffReassign(s)}
+                                    >
+                                      Reassign
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="head-btn-danger"
+                                      disabled={assignBusy}
+                                      onClick={() => handleDeleteStaff(s.id, s.username)}
+                                    >
+                                      Delete
+                                    </button>
+                                    </span>
+                                  </td>
+                                )}
+                              </tr>
                             ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+
+                      <div className="head-assign-card">
+                        <h3>Athletes</h3>
+                        {roster.athletes.length === 0 ? (
+                          <p className="head-assign-empty">No athletes or available athlete accounts yet.</p>
+                        ) : (
+                          <table className="head-table head-athlete-table">
+                            <thead>
+                              <tr>
+                                <th>Athlete</th>
+                                <th>Accountable coach</th>
+                                <th className="head-actions-col">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {roster.athletes.map((a) => (
+                                <tr key={a.id}>
+                                  <td className="head-athlete-person-cell">
+                                    <span className="head-identity">
+                                      <span className="username-highlight">@{a.username}</span>
+                                      {renderOrgBadge(a)}
+                                    </span>
+                                  </td>
+                                  <td className="head-accountable-cell">
+                                    {a.primary_coach_id == null ? 'Unaffiliated' : `@${a.primary_coach_username || a.primary_coach_id}`}
+                                  </td>
+                                  <td className="head-actions-cell">
+                                    <span className="head-athlete-actions">
+                                    {athleteReassignId === a.id ? (
+                                      <>
+                                        <select
+                                          className="head-coach-select"
+                                          value={athleteTargetId}
+                                          disabled={assignBusy || !headId}
+                                          onChange={(ev) => setAthleteTargetId(ev.target.value)}
+                                        >
+                                          <option value="">Unaffiliated</option>
+                                          {coachOptions().map((opt) => (
+                                            <option key={opt.id} value={opt.id}>{opt.label}</option>
+                                          ))}
+                                        </select>
+                                        <button
+                                          type="button"
+                                          className="head-btn-primary"
+                                          disabled={assignBusy || !headId}
+                                          onClick={() => handleAthleteCoachChange(a.id, athleteTargetId, a.username)}
+                                        >
+                                          Assign
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="head-btn-secondary"
+                                          disabled={assignBusy}
+                                          onClick={cancelAthleteReassign}
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="head-btn-danger"
+                                          disabled={assignBusy}
+                                          onClick={() => handleDeleteAthlete(a.id, a.username)}
+                                        >
+                                          Delete
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="head-btn-warning"
+                                          disabled={assignBusy}
+                                          onClick={() => beginAthleteReassign(a)}
+                                        >
+                                          Reassign
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="head-btn-danger"
+                                          disabled={assignBusy}
+                                          onClick={() => handleDeleteAthlete(a.id, a.username)}
+                                        >
+                                          Delete
+                                        </button>
+                                      </>
+                                    )}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="head-file-empty">
+                      <strong>{selectedHeadCategory.username}</strong>
+                      <span>No head coach, line coaches, or athletes are assigned to this category yet.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         )}

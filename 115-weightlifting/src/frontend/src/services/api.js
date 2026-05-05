@@ -114,12 +114,30 @@ export const login = async (username, password) => {
   }
 }
 
-export const register = async (username, password, user_type, extraFields = {}) => {
+export const register = async (username, email, password, user_type, extraFields = {}) => {
   await axios.post(
     `${API_BASE}/api/auth/register/`,
-    { username, password, user_type, ...extraFields },
+    { username, email, password, user_type, ...extraFields },
     { withCredentials: true }
   )
+}
+
+export const requestPasswordReset = async (email) => {
+  const { data } = await axios.post(
+    `${API_BASE}/api/auth/password-reset/`,
+    { email },
+    { withCredentials: true }
+  )
+  return data
+}
+
+export const confirmPasswordReset = async (uid, token, password) => {
+  const { data } = await axios.post(
+    `${API_BASE}/api/auth/password-reset/confirm/`,
+    { uid, token, password },
+    { withCredentials: true }
+  )
+  return data
 }
 
 export const refreshCurrentUser = async () => {
@@ -191,10 +209,39 @@ export const patchHeadStaffLink = async (userId, linked) => {
   return data
 }
 
+export const patchHeadStaffAssignment = async (userId, reportsToId) => {
+  const { data } = await apiClient.patch(`/api/auth/head/staff/${userId}/`, {
+    reports_to_id: reportsToId,
+  })
+  return data
+}
+
+export const deleteHeadStaff = async (userId) => {
+  const { data } = await apiClient.delete(`/api/auth/head/staff/${userId}/`)
+  return data
+}
+
+export const patchHeadCoachCategory = async (userId, categoryPrefix) => {
+  const { data } = await apiClient.patch(`/api/auth/head/head-coaches/${userId}/`, {
+    category_prefix: categoryPrefix,
+  })
+  return data
+}
+
+export const deleteHeadCoach = async (userId) => {
+  const { data } = await apiClient.delete(`/api/auth/head/head-coaches/${userId}/`)
+  return data
+}
+
 export const patchHeadAthletePrimaryCoach = async (athleteId, primaryCoachId) => {
   const { data } = await apiClient.patch(`/api/auth/head/athletes/${athleteId}/`, {
     primary_coach_id: primaryCoachId,
   })
+  return data
+}
+
+export const deleteHeadAthlete = async (athleteId) => {
+  const { data } = await apiClient.delete(`/api/auth/head/athletes/${athleteId}/`)
   return data
 }
 
