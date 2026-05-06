@@ -20,6 +20,34 @@ Then open:
 
 The first backend startup runs migrations and, by default, seeds demo data because `SEED_DEMO=true` in `.env.example`.
 
+### Deployment tiers by Git branch (convention)
+
+We separate **sandbox** work from **packaged deployment** branches:
+
+| Branch | Focus |
+| --- | --- |
+| **`dev`** | **Sandbox** — informal experiments and spikes; not a tier deployment package. |
+| **`pkg_large`** | **Large-scale deployment package** — current priority. Uses LARGE Compose merge ([`docker-compose.large.yml`](docker-compose.large.yml)), [`env.large.example`](env.large.example), and [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md). Run stakeholder **UAT** from artifacts committed on **`pkg_large`**. |
+| **`pkg_medium`** | Medium-tier deployment layout (**planned**). |
+| **`pkg_small`** | Small-tier deployment layout (**planned**). |
+
+Nothing in this repository creates or pushes Git branches automatically.
+
+**Integration baseline:** active integration often lands on a branch such as **`dev/ssvc-acp-cabinet`** until you merge into **`dev`** (sandbox) or promote to **`pkg_*`** — avoid divergent long-lived histories without documenting which branch is canonical.
+
+**Mini-sprint rhythm:** after each sprint on **`dev`** or your integration branch, run [`scripts/validate_docker_stack.sh`](scripts/validate_docker_stack.sh) on `.env.example` plus base **`docker-compose.yml`**. Inspect **`docker_validation_summary_latest.md`** and companion JSON under **`validation-reports/`** (directory is gitignored — fine for local metrics). At **ACP**, point **`pkg_large`** at the commit that passed SSVC and your LARGE checklist in [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md).
+
+### Large-business stack (`pkg_large`)
+
+Day-to-day professor/demo review keeps **`.env.example`** plus base **`docker-compose.yml`** (`DEBUG=True`, demo seed). For the LARGE-shaped Compose stack (more Gunicorn workers, no demo seed, optional resource hints), merge the override file and copy **`env.large.example`** to **`.env`** (then edit secrets and domains):
+
+```bash
+cp env.large.example .env   # then edit secrets and domains
+docker compose -f docker-compose.yml -f docker-compose.large.yml up --build
+```
+
+See [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md) for TLS, `SECRET_KEY`, `DATABASE_URL`, and email checklist items.
+
 ## Demo Credentials
 
 All demo accounts use this password:
@@ -61,7 +89,7 @@ The seeded users are demo accounts for exercising each role. The core access rul
 | Service | Purpose |
 | --- | --- |
 | `postgres` | PostgreSQL 16 database with a persistent Docker volume. |
-| `backend` | Django REST backend served by Gunicorn on port `8000`. |
+| `backend` | Django REST backend served by Gunicorn on port `8000` (default worker count is configurable via `GUNICORN_WORKERS`; see `docker-compose.large.yml`). |
 | `frontend` | React/Vite frontend served by Vite preview on port `4173`. |
 
 Useful commands:
@@ -125,7 +153,11 @@ Important settings:
 ```text
 115_weightlifting_CMPT390_Capstone/
 ├── docker-compose.yml
+├── docker-compose.large.yml   # optional merge file for large-business Compose
 ├── .env.example
+├── env.large.example         # LARGE-tier env template (copy to .env with merge compose)
+├── docs/
+│   └── DEPLOYMENT_LARGE.md    # large-business checklist
 ├── LICENSE
 ├── README.md
 ├── scripts/            # Docker smoke/stress validation harness

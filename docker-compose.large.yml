@@ -1,0 +1,23 @@
+# Large-business-oriented overrides (tier branch convention: pkg_large).
+# Merge with the base stack:
+#   docker compose -f docker-compose.yml -f docker-compose.large.yml up --build
+#
+# Copy env.large.example to .env (or merge those keys into your env) before
+# running with DEBUG=False and a strong SECRET_KEY.
+
+services:
+  postgres:
+    mem_limit: 1g
+    cpus: "1.0"
+
+  backend:
+    environment:
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      SEED_DEMO: "false"
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+    mem_limit: 2g
+    cpus: "2.0"
+
+  frontend:
+    mem_limit: 512m
+    cpus: "0.5"
