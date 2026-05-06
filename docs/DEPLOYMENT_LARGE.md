@@ -21,7 +21,7 @@ When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged 
 
 ## pkg_large locally (one machine, now)
 
-1. Free ports **5432**, **8000**, and **4173** (stop another Compose stack if needed).
+1. Free host ports **5433**, **8001**, and **4174** (defaults), or set **`PKG_LARGE_HOST_POSTGRES_PORT`**, **`PKG_LARGE_HOST_BACKEND_PORT`**, **`PKG_LARGE_HOST_FRONTEND_PORT`** in **`.env.pkg_large`** and align **`VITE_API_BASE_URL`**, **`CORS_ALLOWED_ORIGINS`**, **`CSRF_TRUSTED_ORIGINS`**, **`PASSWORD_RESET_FRONTEND_URL`**. The demo stack may keep **5432 / 8000 / 4173**.
 2. From the repo root:
 
    ```bash
@@ -34,7 +34,7 @@ When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged 
    - [`docker-compose.large.yml`](../docker-compose.large.yml)
    - [`docker-compose.pkg_large.yml`](../docker-compose.pkg_large.yml)
 
-3. Open <http://localhost:4173>. **There are no seeded demo users** (`SEED_DEMO=false`). Register the first head coach / athletes via the app, or:
+3. Open <http://localhost:4174>. **There are no seeded demo users** (`SEED_DEMO=false`). Register the first head coach / athletes via the app, or:
 
    ```bash
    docker compose -p pkg_large --env-file .env.pkg_large \

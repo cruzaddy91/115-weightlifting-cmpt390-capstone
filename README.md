@@ -50,8 +50,8 @@ Nothing in this repository creates or pushes Git branches automatically.
 
 - Uses `.env.pkg_large` (created from [`env.large.local.example`](env.large.local.example); gitignored).
 - **`COMPOSE_PROJECT_NAME=pkg_large`** so Postgres volume/network does not collide with a demo stack on the default project name.
+- **Alternate host ports** — UI **http://localhost:4174**, API **http://localhost:8001**, Postgres **localhost:5433** — so you do **not** need to stop the demo stack on **4173 / 8000 / 5432** (change ports via **`PKG_LARGE_HOST_*`** in `.env.pkg_large` if these clash).
 - **`DEBUG=False`**, multi-worker Gunicorn, **no demo seed** — database starts empty; register via the UI or `docker compose exec` `createsuperuser` (see [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md)).
-- Stop whatever already owns **5432 / 8000 / 4173** before starting (for example `docker compose down` on the demo stack).
 
 Production-shaped hosts/TLS/SMTP: copy [`env.large.example`](env.large.example) into `.env.pkg_large` (or your secrets store), merge the same three Compose files, and place Django behind HTTPS.
 
