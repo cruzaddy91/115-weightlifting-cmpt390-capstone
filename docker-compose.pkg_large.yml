@@ -1,0 +1,9 @@
+# LARGE package runtime: backend reads .env.pkg_large (not demo .env).
+# Used with scripts/up_pkg_large.sh:
+#   COMPOSE_PROJECT_NAME=pkg_large docker compose --env-file .env.pkg_large \
+#     -f docker-compose.yml -f docker-compose.large.yml -f docker-compose.pkg_large.yml up --build
+
+services:
+  backend:
+    env_file:
+      - .env.pkg_large

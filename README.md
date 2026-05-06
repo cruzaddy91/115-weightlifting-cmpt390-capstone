@@ -42,12 +42,18 @@ Nothing in this repository creates or pushes Git branches automatically.
 
 ### Large-business stack (`pkg_large`)
 
-Day-to-day professor/demo review keeps **`.env.example`** plus base **`docker-compose.yml`** (`DEBUG=True`, demo seed). For the LARGE-shaped Compose stack (more Gunicorn workers, no demo seed, optional resource hints), merge the override file and copy **`env.large.example`** to **`.env`** (then edit secrets and domains):
+**Run the LARGE package now (isolated Compose project, does not touch demo `.env`):**
 
 ```bash
-cp env.large.example .env   # then edit secrets and domains
-docker compose -f docker-compose.yml -f docker-compose.large.yml up --build
+./scripts/up_pkg_large.sh
 ```
+
+- Uses `.env.pkg_large` (created from [`env.large.local.example`](env.large.local.example); gitignored).
+- **`COMPOSE_PROJECT_NAME=pkg_large`** so Postgres volume/network does not collide with a demo stack on the default project name.
+- **`DEBUG=False`**, multi-worker Gunicorn, **no demo seed** — database starts empty; register via the UI or `docker compose exec` `createsuperuser` (see [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md)).
+- Stop whatever already owns **5432 / 8000 / 4173** before starting (for example `docker compose down` on the demo stack).
+
+Production-shaped hosts/TLS/SMTP: copy [`env.large.example`](env.large.example) into `.env.pkg_large` (or your secrets store), merge the same three Compose files, and place Django behind HTTPS.
 
 See [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md) for TLS, `SECRET_KEY`, `DATABASE_URL`, and email checklist items.
 
@@ -156,14 +162,18 @@ Important settings:
 ```text
 115_weightlifting_CMPT390_Capstone/
 ├── docker-compose.yml
-├── docker-compose.large.yml   # optional merge file for large-business Compose
+├── docker-compose.large.yml      # LARGE overrides (workers, limits)
+├── docker-compose.pkg_large.yml # backend env_file → .env.pkg_large
 ├── .env.example
-├── env.large.example         # LARGE-tier env template (copy to .env with merge compose)
+├── env.large.example            # production-shaped LARGE env template
+├── env.large.local.example      # localhost LARGE template → .env.pkg_large
 ├── docs/
-│   └── DEPLOYMENT_LARGE.md    # large-business checklist
+│   └── DEPLOYMENT_LARGE.md      # checklist + pkg_large bring-up
 ├── LICENSE
 ├── README.md
-├── scripts/            # Docker smoke/stress validation harness
+├── scripts/
+│   ├── validate_docker_stack.sh  # demo-stack SSVC
+│   └── up_pkg_large.sh           # bring up pkg_large Compose project
 └── 115-weightlifting/
     ├── src/backend/      # Django REST API, Dockerfile, Docker entrypoint
     ├── src/frontend/     # React/Vite app, Dockerfile

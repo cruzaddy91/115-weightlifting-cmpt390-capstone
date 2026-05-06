@@ -11,13 +11,44 @@ Nothing here creates or pushes branches. Promote to **`pkg_large`** at **ACP** w
 
 **Git note:** while **`dev/ssvc-acp-cabinet`** exists, Git cannot also hold a sibling branch named exactly **`dev`** — only rename integration branches if you need that literal name.
 
-When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged environment using keys from **`env.large.example`** (copy to `.env`) and merged Compose — **not** the default `.env.example` demo stack. For regression automation against seeded demos only, use **`scripts/validate_docker_stack.sh`** on the base compose path.
+When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged environment using **`.env.pkg_large`** filled from [`env.large.example`](../env.large.example) (HTTPS, SMTP) or [`env.large.local.example`](../env.large.local.example) for localhost — plus the three-file Compose merge — **not** the demo `.env.example` stack. For regression automation against seeded demos only, use [`scripts/validate_docker_stack.sh`](../scripts/validate_docker_stack.sh) on the base compose path.
 
 | Branch | Role |
 | --- | --- |
 | **`pkg_large`** | Large scale — **this document**. Active packaging focus. |
 | **`pkg_medium`** | Medium-scale deployment (**planned**). |
 | **`pkg_small`** | Small-scale deployment (**planned**). |
+
+## pkg_large locally (one machine, now)
+
+1. Free ports **5432**, **8000**, and **4173** (stop another Compose stack if needed).
+2. From the repo root:
+
+   ```bash
+   ./scripts/up_pkg_large.sh
+   ```
+
+   This creates **`.env.pkg_large`** from [`env.large.local.example`](../env.large.local.example) (if missing), replaces the placeholder **`SECRET_KEY`** with **`openssl rand -hex 32`**, then runs Compose with project name **`pkg_large`** using:
+
+   - [`docker-compose.yml`](../docker-compose.yml)
+   - [`docker-compose.large.yml`](../docker-compose.large.yml)
+   - [`docker-compose.pkg_large.yml`](../docker-compose.pkg_large.yml)
+
+3. Open <http://localhost:4173>. **There are no seeded demo users** (`SEED_DEMO=false`). Register the first head coach / athletes via the app, or:
+
+   ```bash
+   docker compose -p pkg_large --env-file .env.pkg_large \
+     -f docker-compose.yml -f docker-compose.large.yml -f docker-compose.pkg_large.yml \
+     exec backend python manage.py createsuperuser
+   ```
+
+4. Tear down (including LARGE Postgres volume):
+
+   ```bash
+   docker compose -p pkg_large --env-file .env.pkg_large \
+     -f docker-compose.yml -f docker-compose.large.yml -f docker-compose.pkg_large.yml \
+     down -v
+   ```
 
 ## Preconditions
 
@@ -27,14 +58,25 @@ When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged 
 
 ## Compose and env
 
+### Demo SSVC vs pkg_large
+
+[`scripts/validate_docker_stack.sh`](../scripts/validate_docker_stack.sh) uses `.env.example` and base compose only (seeded demos).
+
+For **pkg_large**, use **`.env.pkg_large`** + three-file merge above — **not** the demo `.env`.
+
+### Production-shaped template
+
 1. Base stack: [`docker-compose.yml`](../docker-compose.yml).
-2. Large overrides (workers, no demo seed, optional CPU/memory hints): merge [`docker-compose.large.yml`](../docker-compose.large.yml):
+2. Large overrides (workers, no demo seed, optional CPU/memory hints): [`docker-compose.large.yml`](../docker-compose.large.yml).
+3. Backend env file override: [`docker-compose.pkg_large.yml`](../docker-compose.pkg_large.yml) (points at `.env.pkg_large`).
 
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.large.yml up --build
-   ```
+```bash
+docker compose --env-file .env.pkg_large \
+  -f docker-compose.yml -f docker-compose.large.yml -f docker-compose.pkg_large.yml \
+  up --build
+```
 
-3. Copy [`env.large.example`](../env.large.example) to `.env` on the deployment host (or inject equivalent keys). Adjust placeholders (`example.invalid`, passwords, SMTP).
+4. For internet-facing deploys, fill **`.env.pkg_large`** from [`env.large.example`](../env.large.example) (HTTPS origins, SMTP, strong secrets). For localhost LARGE bootstrapping, [`env.large.local.example`](../env.large.local.example) + [`scripts/up_pkg_large.sh`](../scripts/up_pkg_large.sh) are sufficient.
 
 ## Django production guardrails
 
@@ -42,7 +84,7 @@ Defined in [`115-weightlifting/src/backend/config/settings.py`](../115-weightlif
 
 - **`DEBUG=False`** requires a **non-default `SECRET_KEY`**. Django exits at startup if `SECRET_KEY` still matches the insecure default string.
 - With **`DEBUG=False`**, session and CSRF cookies are **Secure**; **`SECURE_PROXY_SSL_HEADER`** is set so HTTPS detection works behind your TLS terminator.
-- **`SECURE_SSL_REDIRECT`**: default **`True`** when `DEBUG=False`. If you run an HTTP-only local smoke test with LARGE compose, set **`SECURE_SSL_REDIRECT=False`** in `.env` so redirects do not break browser/API checks.
+- **`SECURE_SSL_REDIRECT`**: default **`True`** when `DEBUG=False`. Local LARGE compose uses **`False`** in **`env.large.local.example`** / **`.env.pkg_large`** so plain HTTP works without a TLS terminator.
 
 ## Database
 
