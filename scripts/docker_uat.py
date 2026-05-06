@@ -269,7 +269,9 @@ def main() -> int:
     run_tag = uuid.uuid4().hex[:10]
     # Line-coach registration requires PREFIX_rest where the numeric prefix is not yet used
     # by any username in the DB — fixed 090/091/… fails on repeat UAT runs.
-    _coach_prefix_pool = list(range(60, 90))
+    # Exclude seeded demo line prefixes (008, 013, 048, 088) — only 088 overlaps pool 60–89.
+    _demo_line_prefixes = {8, 13, 48, 88}
+    _coach_prefix_pool = [n for n in range(60, 90) if n not in _demo_line_prefixes]
     random.shuffle(_coach_prefix_pool)
     _cp = _coach_prefix_pool[:4]
     temp_coach = f"{_cp[0]:03d}_dockerUATc_{run_tag}"
