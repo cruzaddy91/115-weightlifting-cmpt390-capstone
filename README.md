@@ -22,20 +22,23 @@ The first backend startup runs migrations and, by default, seeds demo data becau
 
 ### Deployment tiers by Git branch (convention)
 
-We separate **sandbox** work from **packaged deployment** branches:
+**Sandbox** work stays informal on **`main`**, topic branches, or your integration line (e.g. **`dev/ssvc-acp-cabinet`**). Nothing here defines or creates a separate “sandbox” Git branch — use whatever workflow you already prefer.
+
+**Packaging** branches carry tier-specific deployment layouts:
 
 | Branch | Focus |
 | --- | --- |
-| **`dev`** | **Sandbox** — informal experiments and spikes; not a tier deployment package. |
 | **`pkg_large`** | **Large-scale deployment package** — current priority. Uses LARGE Compose merge ([`docker-compose.large.yml`](docker-compose.large.yml)), [`env.large.example`](env.large.example), and [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md). Run stakeholder **UAT** from artifacts committed on **`pkg_large`**. |
 | **`pkg_medium`** | Medium-tier deployment layout (**planned**). |
 | **`pkg_small`** | Small-tier deployment layout (**planned**). |
 
 Nothing in this repository creates or pushes Git branches automatically.
 
-**Integration baseline:** active integration often lands on a branch such as **`dev/ssvc-acp-cabinet`** until you merge into **`dev`** (sandbox) or promote to **`pkg_*`** — avoid divergent long-lived histories without documenting which branch is canonical.
+**Git note:** while **`dev/ssvc-acp-cabinet`** exists, Git cannot also hold a sibling branch named exactly **`dev`** — only rename/move integration branches if you need that literal name.
 
-**Mini-sprint rhythm:** after each sprint on **`dev`** or your integration branch, run [`scripts/validate_docker_stack.sh`](scripts/validate_docker_stack.sh) on `.env.example` plus base **`docker-compose.yml`**. Inspect **`docker_validation_summary_latest.md`** and companion JSON under **`validation-reports/`** (directory is gitignored — fine for local metrics). At **ACP**, point **`pkg_large`** at the commit that passed SSVC and your LARGE checklist in [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md).
+**Integration baseline:** document whether **`dev/ssvc-acp-cabinet`** or **`main`** is canonical until **`pkg_large`** is promoted — avoid silent divergence.
+
+**Mini-sprint rhythm:** after each sprint on your integration branch (or **`pkg_large`** prep), run [`scripts/validate_docker_stack.sh`](scripts/validate_docker_stack.sh) on `.env.example` plus base **`docker-compose.yml`**. Inspect **`docker_validation_summary_latest.md`** and companion JSON under **`validation-reports/`** (directory is gitignored — fine for local metrics). At **ACP**, point **`pkg_large`** at the commit that passed SSVC and your LARGE checklist in [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md).
 
 ### Large-business stack (`pkg_large`)
 

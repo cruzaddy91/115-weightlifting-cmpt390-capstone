@@ -2,18 +2,19 @@
 
 ## Branch convention (manual Git workflow)
 
-### Sandbox vs packaging
+### Integration vs packaging
 
-- **`dev`** is the **sandbox** branch for informal work; it does not replace a **`pkg_*`** deployment line.
+- **Sandbox / integration:** use **`main`**, topic branches, or **`dev/ssvc-acp-cabinet`** (or similar) — whatever your team already uses for informal work. No separate sandbox branch is prescribed here.
 - **`pkg_large`** holds this LARGE deployment path (Compose merge file, env template, tuning below). **`pkg_medium`** and **`pkg_small`** are reserved for future tier-specific layouts.
 
-Nothing here creates or pushes branches. Integration work may live on **`dev/ssvc-acp-cabinet`** (or similar) until you merge into **`dev`** or promote to **`pkg_large`** at ACP — document whichever branch is canonical for your team when both exist.
+Nothing here creates or pushes branches. Promote to **`pkg_large`** at **ACP** when SSVC and your LARGE checklist pass.
+
+**Git note:** while **`dev/ssvc-acp-cabinet`** exists, Git cannot also hold a sibling branch named exactly **`dev`** — only rename integration branches if you need that literal name.
 
 When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged environment using keys from **`env.large.example`** (copy to `.env`) and merged Compose — **not** the default `.env.example` demo stack. For regression automation against seeded demos only, use **`scripts/validate_docker_stack.sh`** on the base compose path.
 
 | Branch | Role |
 | --- | --- |
-| **`dev`** | Sandbox — spikes and informal integration. |
 | **`pkg_large`** | Large scale — **this document**. Active packaging focus. |
 | **`pkg_medium`** | Medium-scale deployment (**planned**). |
 | **`pkg_small`** | Small-scale deployment (**planned**). |
