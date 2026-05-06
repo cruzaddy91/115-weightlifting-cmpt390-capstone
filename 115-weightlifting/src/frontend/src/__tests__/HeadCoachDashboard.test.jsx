@@ -144,6 +144,7 @@ describe('HeadCoachDashboard UAT 3 shell', () => {
     expect((await screen.findAllByText(/NOBLE TEAM/i)).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/BLUE TEAM/i).length).toBeGreaterThan(0)
     expect(screen.getByLabelText(/Skill team for 000_Athlete1/i)).toBeTruthy()
+    expect(screen.getByLabelText(/Accountable coach for 000_Athlete1/i)).toBeTruthy()
   })
 
   it('shows assignment feedback as a hover-pausable toast', async () => {

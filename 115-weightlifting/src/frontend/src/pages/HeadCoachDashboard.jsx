@@ -20,6 +20,10 @@ import { getCurrentUser } from '../utils/auth'
 import { formatApiError } from '../utils/errors'
 import './HeadCoachDashboard.css'
 
+/** Skill-team athlete tables use `head-skill-roster-table` only (never `head-athlete-table`) so mobile
+ *  stacked-card CSS does not flatten rows / grid-squeeze selects. After changing this file or CSS, rebuild
+ *  the frontend image: from repo root, `docker compose build frontend --no-cache` (preview bakes `dist` at build).
+ */
 const COACH_ACCENT_CLASSES = [
   'olive-drab',
   'od-green',
@@ -111,7 +115,7 @@ const SKILL_TEAM_CONFIG = [
   { key: 'RED', label: 'RED TEAM', tone: 'red' },
   { key: 'SILVER', label: 'SILVER TEAM', tone: 'silver' },
   { key: 'BLUE', label: 'BLUE TEAM', tone: 'blue' },
-  { key: '', label: 'UNASSIGNED TEAM', tone: 'unassigned' },
+  { key: '', label: 'NO TEAM', tone: 'unassigned' },
 ]
 
 const prefixForUsername = (username = '') => username.split('_', 1)[0] || ''
@@ -173,8 +177,6 @@ const HeadCoachDashboard = () => {
   const [headCoachTargetPrefix, setHeadCoachTargetPrefix] = useState('')
   const [staffReassignId, setStaffReassignId] = useState(null)
   const [staffTargetId, setStaffTargetId] = useState('')
-  const [athleteReassignId, setAthleteReassignId] = useState(null)
-  const [athleteTargetId, setAthleteTargetId] = useState('')
   const [activeWorkspace, setActiveWorkspace] = useState('head')
   const [analytics, setAnalytics] = useState({
     styleGroups: [],
@@ -190,7 +192,7 @@ const HeadCoachDashboard = () => {
   const [analyticsError, setAnalyticsError] = useState('')
 
   const headUser = getCurrentUser()
-  const headId = headUser?.id
+  const headId = headUser?.id ?? headUser?.pk
   const headUserPrefix = prefixForUsername(headUser?.username)
   const accessMeta = useMemo(() => accessMetaForUser(headUser), [headUser])
   const isGmHeadUser = accessMeta.key === 'gmhc'
@@ -403,6 +405,60 @@ const HeadCoachDashboard = () => {
     return opts
   }
 
+  const gmAthleteCoachAssignOptions = useMemo(() => {
+    const opts = []
+    const seen = new Set()
+    const addOption = (id, label) => {
+      if (id == null || seen.has(id)) return
+      seen.add(id)
+      opts.push({ id, label })
+    }
+    ;[...roster.headCoaches]
+      .sort((a, b) => a.username.localeCompare(b.username))
+      .forEach((h) => {
+        const role = prefixForUsername(h.username) === '117' ? 'GMHC' : 'AGMHC'
+        addOption(h.id, `@${h.username} (${role})`)
+      })
+    ;[...roster.staff]
+      .sort((a, b) => a.username.localeCompare(b.username))
+      .forEach((s) => {
+        addOption(s.id, `@${s.username} (LC)`)
+      })
+    return opts
+  }, [roster.headCoaches, roster.staff])
+
+  const scopedAthleteCoachAssignOptions = useMemo(() => {
+    if (!headId) return []
+    const opts = []
+    const seen = new Set()
+    const addOption = (id, label) => {
+      if (id == null || seen.has(id)) return
+      seen.add(id)
+      opts.push({ id, label })
+    }
+    addOption(headId, `@${headUser?.username || 'you'} (head)`)
+    roster.staff
+      .filter((s) => s.reports_to_id === headId)
+      .sort((a, b) => a.username.localeCompare(b.username))
+      .forEach((s) => addOption(s.id, `@${s.username} (line)`))
+    return opts
+  }, [headId, headUser?.username, roster.staff])
+
+  const athleteCoachOptionsForRow = useCallback((athlete) => {
+    const base = isGmHeadUser ? gmAthleteCoachAssignOptions : scopedAthleteCoachAssignOptions
+    const out = [...base]
+    if (
+      athlete.primary_coach_id != null
+      && !out.some((o) => o.id === athlete.primary_coach_id)
+    ) {
+      out.push({
+        id: athlete.primary_coach_id,
+        label: `@${athlete.primary_coach_username || athlete.primary_coach_id} (current)`,
+      })
+    }
+    return out
+  }, [gmAthleteCoachAssignOptions, isGmHeadUser, scopedAthleteCoachAssignOptions])
+
   const headCoachOptions = () => {
     if (roster.headCoaches.length > 0) {
       return roster.headCoaches.map((h) => ({ id: h.id, label: `@${h.username}` }))
@@ -520,16 +576,6 @@ const HeadCoachDashboard = () => {
     setStaffTargetId('')
   }
 
-  const beginAthleteReassign = (athlete) => {
-    setAthleteReassignId(athlete.id)
-    setAthleteTargetId(athlete.primary_coach_id ?? '')
-  }
-
-  const cancelAthleteReassign = () => {
-    setAthleteReassignId(null)
-    setAthleteTargetId('')
-  }
-
   const handleInvite = async (e) => {
     e.preventDefault()
     const u = inviteUsername.trim()
@@ -616,7 +662,6 @@ const HeadCoachDashboard = () => {
       const target = primaryCoachId === '' ? null : Number(primaryCoachId)
       await patchHeadAthletePrimaryCoach(athleteId, target)
       showAssignToast(target == null ? `Moved @${username} to unaffiliated.` : `Assigned @${username}.`)
-      cancelAthleteReassign()
       await refreshAll()
     } catch (err) {
       showAssignToast(formatApiError(err, 'Could not update athlete coach.'))
@@ -629,7 +674,11 @@ const HeadCoachDashboard = () => {
     setAssignBusy(true)
     try {
       await patchHeadAthleteSkillTeam(athleteId, skillTeam)
-      showAssignToast(`Updated @${username} to ${skillTeam} TEAM.`)
+      showAssignToast(
+        skillTeam
+          ? `Updated @${username} skill team to ${skillTeam}.`
+          : `Cleared skill team for @${username} (NO TEAM).`,
+      )
       await refreshAll()
     } catch (err) {
       showAssignToast(formatApiError(err, 'Skill-team request required or blocked by access rules.'))
@@ -652,7 +701,7 @@ const HeadCoachDashboard = () => {
     }
   }
 
-  const renderSkillTeamSections = (sections, { showActions = false } = {}) => (
+  const renderSkillTeamSections = (sections, { showDeleteActions = false } = {}) => (
     <div className="head-skill-team-stack">
       {sections.map((section) => (
         <section
@@ -666,14 +715,14 @@ const HeadCoachDashboard = () => {
           </div>
           <div className="head-skill-team-table-wrap">
             <table
-              className={`head-table head-athlete-table head-skill-roster-table ${showActions ? 'head-skill-roster-table--actions' : ''}`}
+              className={`head-table head-skill-roster-table ${showDeleteActions ? 'head-skill-roster-table--actions' : ''}`}
             >
             <thead>
               <tr>
                 <th>Athlete</th>
                 <th>Skill team</th>
                 <th>Accountable coach</th>
-                {showActions && <th className="head-actions-col">Action</th>}
+                {showDeleteActions && <th className="head-actions-col">Action</th>}
               </tr>
             </thead>
             <tbody>
@@ -693,76 +742,37 @@ const HeadCoachDashboard = () => {
                       aria-label={`Skill team for ${a.username}`}
                       onChange={(ev) => handleAthleteSkillTeamChange(a.id, ev.target.value, a.username)}
                     >
-                      <option value="">Unassigned</option>
+                      <option value="">NO TEAM</option>
                       {SKILL_TEAM_CONFIG.filter((team) => team.key).map((team) => (
                         <option key={team.key} value={team.key}>{team.label}</option>
                       ))}
                     </select>
                   </td>
                   <td className="head-accountable-cell">
-                    {a.primary_coach_id == null ? 'Unaffiliated' : `@${a.primary_coach_username || a.primary_coach_id}`}
+                    <select
+                      className="head-coach-select head-accountable-select"
+                      value={a.primary_coach_id ?? ''}
+                      disabled={assignBusy || !headId}
+                      aria-label={`Accountable coach for ${a.username}`}
+                      onChange={(ev) => handleAthleteCoachChange(a.id, ev.target.value, a.username)}
+                    >
+                      <option value="">XXX_UNASSIGNED</option>
+                      {athleteCoachOptionsForRow(a).map((opt) => (
+                        <option key={opt.id} value={opt.id}>{opt.label}</option>
+                      ))}
+                    </select>
                   </td>
-                  {showActions && (
+                  {showDeleteActions && (
                     <td className="head-actions-cell">
                       <span className="head-athlete-actions">
-                      {athleteReassignId === a.id ? (
-                        <>
-                          <select
-                            className="head-coach-select"
-                            value={athleteTargetId}
-                            disabled={assignBusy || !headId}
-                            onChange={(ev) => setAthleteTargetId(ev.target.value)}
-                          >
-                            <option value="">Unaffiliated</option>
-                            {coachOptions().map((opt) => (
-                              <option key={opt.id} value={opt.id}>{opt.label}</option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="head-btn-primary"
-                            disabled={assignBusy || !headId}
-                            onClick={() => handleAthleteCoachChange(a.id, athleteTargetId, a.username)}
-                          >
-                            Assign
-                          </button>
-                          <button
-                            type="button"
-                            className="head-btn-secondary"
-                            disabled={assignBusy}
-                            onClick={cancelAthleteReassign}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="head-btn-danger"
-                            disabled={assignBusy}
-                            onClick={() => handleDeleteAthlete(a.id, a.username)}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            className="head-btn-warning"
-                            disabled={assignBusy}
-                            onClick={() => beginAthleteReassign(a)}
-                          >
-                            Reassign
-                          </button>
-                          <button
-                            type="button"
-                            className="head-btn-danger"
-                            disabled={assignBusy}
-                            onClick={() => handleDeleteAthlete(a.id, a.username)}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
+                        <button
+                          type="button"
+                          className="head-btn-danger"
+                          disabled={assignBusy}
+                          onClick={() => handleDeleteAthlete(a.id, a.username)}
+                        >
+                          Delete
+                        </button>
                       </span>
                     </td>
                   )}
@@ -1290,12 +1300,12 @@ const HeadCoachDashboard = () => {
                         )}
                       </div>
 
-                      <div className="head-assign-card">
+                      <div className="head-assign-card" data-head-ui="skill-roster-2026-05-05">
                         <h3>Athletes</h3>
                         {roster.athletes.length === 0 ? (
                           <p className="head-assign-empty">No athletes or available athlete accounts yet.</p>
                         ) : (
-                          renderSkillTeamSections(allSkillTeamSections, { showActions: true })
+                          renderSkillTeamSections(allSkillTeamSections, { showDeleteActions: true })
                         )}
                       </div>
                     </div>
@@ -1374,7 +1384,7 @@ const HeadCoachDashboard = () => {
                             )}
                           </div>
 
-                          <div className="head-assign-card">
+                          <div className="head-assign-card" data-head-ui="skill-roster-2026-05-05">
                             <h3>Athletes</h3>
                             {selectedCategoryRoster.athletes.length === 0 ? (
                               <p className="head-assign-empty">No athletes assigned to this category yet.</p>

@@ -12,6 +12,7 @@ from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .org_labels import NORMAL_MEMBER_PREFIXES, PREFIX_RE
 from .serializers import (
     AthleteProfileUpdateSerializer,
     CurrentUserSerializer,
@@ -105,6 +106,32 @@ class RegisterView(APIView):
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CoachPrefixAvailabilityView(APIView):
+    """Public list of unused numeric prefixes for coach self-serve signup (NNN_Handle)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        used = set()
+        for username in User.objects.values_list('username', flat=True):
+            match = PREFIX_RE.match(username or '')
+            if match:
+                used.add(match.group(1))
+        available = [p for p in sorted(NORMAL_MEMBER_PREFIXES) if p not in used]
+        return Response(
+            {
+                'available_numeric_prefixes': available,
+                'taken_in_pool_count': len(used & NORMAL_MEMBER_PREFIXES),
+                'pool_size': len(NORMAL_MEMBER_PREFIXES),
+                'username_format': 'NNN_YourHandle',
+                'notes': (
+                    'Reserved for org lanes: 001-004, 117. Athlete signup uses the smallest free prefix automatically; '
+                    'coaches pick an available NNN explicitly.'
+                ),
+            }
+        )
 
 
 class PasswordResetRequestView(APIView):

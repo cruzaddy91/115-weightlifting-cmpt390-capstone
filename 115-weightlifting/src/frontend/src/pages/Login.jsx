@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   confirmPasswordReset,
+  fetchCoachPrefixAvailability,
   login,
   register as apiRegister,
   requestPasswordReset,
@@ -22,10 +23,42 @@ const Login = () => {
   const hasResetParams = searchParams.has('uid') && searchParams.has('token')
   const [authMode, setAuthMode] = useState(hasResetParams ? 'reset' : 'login')
   const [registerSuccess, setRegisterSuccess] = useState('')
+  const [coachPrefixHint, setCoachPrefixHint] = useState('')
   const navigate = useNavigate()
   const showRegister = authMode === 'register'
   const showForgot = authMode === 'forgot'
   const showReset = authMode === 'reset'
+
+  useEffect(() => {
+    if (!showRegister || userType !== 'coach') {
+      setCoachPrefixHint('')
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data = await fetchCoachPrefixAvailability()
+        if (cancelled) return
+        const avail = data.available_numeric_prefixes
+        if (Array.isArray(avail) && avail.length > 0) {
+          const preview = avail.slice(0, 12).join(', ')
+          const more = avail.length > 12 ? ` ... (+${avail.length - 12} more)` : ''
+          setCoachPrefixHint(
+            `Use NNN_Handle (example: ${avail[0]}_JaneCoach). Open numbers include ${preview}${more}. If you pick a taken NNN, registration will tell you to try another.`,
+          )
+        } else {
+          setCoachPrefixHint('Could not read available numbers from the server; you can still try—taken prefixes are rejected with a clear message.')
+        }
+      } catch {
+        if (!cancelled) {
+          setCoachPrefixHint('Could not load available coach numbers. You can still register; the server rejects taken prefixes.')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [showRegister, userType])
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -161,8 +194,12 @@ const Login = () => {
                   />
                   {userType === 'athlete' && (
                     <p className="form-hint">
-                      Enter only the base athlete name. The system will assign the `000_`, `001_`, `002_` prefix.
+                      Enter only the base athlete name (e.g. JaneDoe). The system assigns the smallest free prefix
+                      in <code>000_</code> or <code>005_</code>-<code>099_</code> (001-004 and 117 stay reserved for org lanes).
                     </p>
+                  )}
+                  {userType === 'coach' && coachPrefixHint && (
+                    <p className="form-hint">{coachPrefixHint}</p>
                   )}
                 </div>
                 <div className="form-group">

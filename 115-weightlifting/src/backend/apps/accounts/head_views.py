@@ -642,13 +642,17 @@ class HeadAthleteSkillTeamView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         athlete = get_object_or_404(User, pk=user_id, user_type='athlete', is_active=True)
-        skill_team = str(request.data.get('skill_team') or '').strip().upper()
+        raw = str(request.data.get('skill_team') or '').strip().upper().replace(' ', '_')
         allowed_teams = {choice for choice, _label in User.SKILL_TEAM_CHOICES}
-        if skill_team not in allowed_teams:
-            return Response(
-                {'skill_team': ['Choose NOBLE, RED, SILVER, or BLUE.']},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if raw in ('', 'NONE', 'NO_TEAM', 'XXX_UNASSIGNED'):
+            skill_team = ''
+        else:
+            skill_team = raw
+            if skill_team not in allowed_teams:
+                return Response(
+                    {'skill_team': ['Choose NOBLE, RED, SILVER, BLUE, or clear with NONE / NO TEAM.']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         previous_role = athlete.skill_team_updated_by_role or ''
         permitted = False

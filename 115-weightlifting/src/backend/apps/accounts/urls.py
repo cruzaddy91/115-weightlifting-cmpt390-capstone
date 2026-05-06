@@ -10,6 +10,7 @@ from .head_views import (
 )
 from .views import (
     AthleteListView,
+    CoachPrefixAvailabilityView,
     CurrentUserView,
     LogoutView,
     PasswordResetConfirmView,
@@ -21,6 +22,11 @@ from .views import (
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
+    path(
+        'register/coach-prefixes/',
+        CoachPrefixAvailabilityView.as_view(),
+        name='coach-prefix-availability',
+    ),
     path('password-reset/', PasswordResetRequestView.as_view(), name='password-reset'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('token/', TokenObtainPairViewAllowAny.as_view(), name='token_obtain_pair'),

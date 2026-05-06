@@ -92,17 +92,32 @@ class RegisterSerializer(serializers.ModelSerializer):
         submitted_code = (attrs.get('coach_signup_code') or '').strip()
         if user_type == 'coach':
             prefix = _username_prefix(username)
+            if not prefix:
+                raise serializers.ValidationError({
+                    'username': (
+                        'Coach usernames must look like 008_MyHandle: three digits, an underscore, then your handle.'
+                    ),
+                })
             if prefix in RESERVED_ORG_PREFIXES:
                 raise serializers.ValidationError({
-                    'username': 'That numeric prefix is reserved for GM/AGM head-coach organization labels.',
+                    'username': (
+                        f'Prefix {prefix} is reserved for organization lanes (GM/AGM). '
+                        'Choose a different number from the available coach/athlete pool.'
+                    ),
                 })
             if prefix not in NORMAL_MEMBER_PREFIXES:
                 raise serializers.ValidationError({
-                    'username': 'Line coach usernames must start with an available 000_ or 005_ through 099_ prefix.',
+                    'username': (
+                        f'Prefix {prefix} is not in the member pool. '
+                        'Use 000 or 005 through 099 (see available numbers on the registration form).'
+                    ),
                 })
             if _prefix_in_use(prefix):
                 raise serializers.ValidationError({
-                    'username': 'That numeric prefix is already assigned to another coach or athlete.',
+                    'username': (
+                        f'Prefix {prefix} is already taken by another user. '
+                        'Pick another free number—athletes auto-receive the smallest available prefix.'
+                    ),
                 })
             if User.objects.filter(username__iexact=username).exists():
                 raise serializers.ValidationError({

@@ -122,6 +122,14 @@ export const register = async (username, email, password, user_type, extraFields
   )
 }
 
+/** Coach signup: list of unused numeric prefixes (000, 005-099) for NNN_Handle usernames. */
+export const fetchCoachPrefixAvailability = async () => {
+  const { data } = await axios.get(`${API_BASE}/api/auth/register/coach-prefixes/`, {
+    withCredentials: true,
+  })
+  return data
+}
+
 export const requestPasswordReset = async (email) => {
   const { data } = await axios.post(
     `${API_BASE}/api/auth/password-reset/`,

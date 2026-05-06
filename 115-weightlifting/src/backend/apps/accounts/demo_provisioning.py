@@ -14,6 +14,7 @@ from apps.accounts.models import OrgLaneAssignment
 from apps.accounts.org_labels import (
     AGM_PREFIXES,
     DEMO_ATHLETE_USERNAME,
+    DEMO_COACH_USERNAME,
     DEMO_HEAD_COACH_USERNAMES,
     DEMO_LINE_COACH_USERNAMES,
     DEMO_UNASSIGNED_ATHLETE_USERNAMES,
@@ -280,6 +281,23 @@ def _preserve_current(gm: User, *, password: str = PASSWORD) -> list[User]:
                 'skill_team_updated_at',
             ]
         )
+    # Docker UAT / SSVC expect this exact pool: one athlete on DEMO_COACH, fifteen unassigned
+    # (XXX_UNASSIGNED roster metadata). Do not skip when other athletes already exist — partial UAT
+    # runs leave the DB inconsistent otherwise.
+    demo_coach = User.objects.filter(username=DEMO_COACH_USERNAME, user_type='coach', is_active=True).first()
+    if demo_coach:
+        primary_demo = User.objects.filter(username=DEMO_ATHLETE_USERNAME, user_type='athlete').first()
+        if primary_demo:
+            primary_demo.primary_coach = demo_coach
+            primary_demo.org_lane_prefix = ''
+            primary_demo.save(update_fields=['primary_coach', 'org_lane_prefix'])
+        for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
+            row = User.objects.filter(username=username, user_type='athlete').first()
+            if not row:
+                continue
+            row.primary_coach = None
+            row.org_lane_prefix = ''
+            row.save(update_fields=['primary_coach', 'org_lane_prefix'])
     return athletes
 
 

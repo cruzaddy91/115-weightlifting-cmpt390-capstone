@@ -664,7 +664,8 @@
 }
 
 .head-head-table,
-.head-athlete-table {
+.head-athlete-table,
+.head-table.head-skill-roster-table {
   margin-top: 0.35rem;
   table-layout: fixed;
 }
@@ -699,7 +700,9 @@
 }
 
 .head-accountable-cell {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+  word-spacing: normal;
 }
 
 .head-category-cell,
@@ -781,6 +784,14 @@
   color: inherit;
 }
 
+/* Skill-team athlete rows: avoid global min-width forcing a huge table. */
+.head-skill-team-section .head-skill-roster-table .head-coach-select {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.42rem;
+}
+
 .head-skill-team-stack {
   display: grid;
   gap: 0.85rem;
@@ -804,8 +815,16 @@
   color: var(--text-muted, rgba(255, 255, 255, 0.74));
 }
 
-.head-skill-team-section .head-athlete-table {
+.head-skill-team-section .head-skill-roster-table {
   margin-top: 0;
+}
+
+/* Real column headers only — mobile card layout must not inject ::before labels here */
+.head-skill-roster-table .head-skill-cell::before,
+.head-skill-roster-table .head-accountable-cell::before {
+  content: none !important;
+  display: none !important;
+  margin: 0 !important;
 }
 
 /* Skill-team blocks use 3 or 4 columns; global .head-athlete-table widths are for the old 3-col layout. */
@@ -816,42 +835,44 @@
 
 .head-skill-team-section .head-skill-roster-table {
   table-layout: fixed;
-  min-width: min(100%, 44rem);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) th:nth-child(1),
 .head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) td:nth-child(1) {
-  width: 36%;
+  width: 30%;
 }
 
 .head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) th:nth-child(2),
 .head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) td:nth-child(2) {
-  width: 22%;
+  width: 26%;
 }
 
 .head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) th:nth-child(3),
 .head-skill-team-section .head-skill-roster-table:not(.head-skill-roster-table--actions) td:nth-child(3) {
-  width: 42%;
+  width: 44%;
 }
 
 .head-skill-team-section .head-skill-roster-table--actions th:nth-child(1),
 .head-skill-team-section .head-skill-roster-table--actions td:nth-child(1) {
-  width: 28%;
+  width: 26%;
 }
 
 .head-skill-team-section .head-skill-roster-table--actions th:nth-child(2),
 .head-skill-team-section .head-skill-roster-table--actions td:nth-child(2) {
-  width: 18%;
+  width: 22%;
 }
 
 .head-skill-team-section .head-skill-roster-table--actions th:nth-child(3),
 .head-skill-team-section .head-skill-roster-table--actions td:nth-child(3) {
-  width: 22%;
+  width: 38%;
 }
 
 .head-skill-team-section .head-skill-roster-table--actions .head-actions-col,
 .head-skill-team-section .head-skill-roster-table--actions .head-actions-cell {
-  width: 32%;
+  width: 14%;
 }
 
 .head-skill-team-section .head-skill-roster-table th,
@@ -864,6 +885,18 @@
 }
 
 .head-skill-team-section .head-skill-select {
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.head-skill-team-section .head-accountable-cell {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.head-skill-team-section .head-accountable-select {
   max-width: 100%;
   width: 100%;
   min-width: 0;
@@ -1137,14 +1170,21 @@
   }
 
   .head-category-cell,
-  .head-status-cell,
-  .head-skill-cell,
-  .head-accountable-cell {
+  .head-status-cell {
     display: grid;
     flex-direction: column;
     align-items: center;
     justify-items: center;
     text-align: center;
+  }
+
+  /* Do NOT apply stacked grid to .head-skill-cell / .head-accountable-cell globally:
+     skill-roster <td> use these classes and grid + narrow columns causes one-char “Unaffiliated” wraps. */
+  .head-roster-table .head-accountable-cell {
+    display: block;
+    text-align: center;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .head-actions-cell {
@@ -1167,8 +1207,6 @@
   .head-status-cell::before,
   .head-roster-person-cell::before,
   .head-athlete-person-cell::before,
-  .head-skill-cell::before,
-  .head-accountable-cell::before,
   .head-actions-cell::before {
     display: block;
     margin-bottom: 0.2rem;
@@ -1199,12 +1237,15 @@
     content: 'Line coach';
   }
 
-  .head-accountable-cell::before {
+  .head-roster-table:not(.head-skill-roster-table) .head-accountable-cell::before {
     content: 'Accountable coach';
-  }
-
-  .head-skill-cell::before {
-    content: 'Skill team';
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--text-muted, rgba(255, 255, 255, 0.68));
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .head-actions-cell::before {
@@ -1213,6 +1254,11 @@
 
   .head-actions-cell button {
     min-width: 7.5rem;
+  }
+
+  .head-skill-team-section .head-skill-roster-table--actions .head-actions-cell button {
+    min-width: 0;
+    max-width: 7rem;
   }
 
   .head-coach-select {

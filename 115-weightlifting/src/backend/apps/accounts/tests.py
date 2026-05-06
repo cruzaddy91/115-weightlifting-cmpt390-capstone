@@ -255,6 +255,34 @@ class CoachRegistrationGateTests(TestCase):
         self.assertFalse(User.objects.filter(username='hc1').exists())
 
 
+class CoachPrefixAvailabilityTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('coach-prefix-availability')
+
+    def test_lists_available_prefixes_empty_db(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        avail = data.get('available_numeric_prefixes')
+        self.assertIsInstance(avail, list)
+        self.assertGreater(len(avail), 10)
+        self.assertEqual(len(avail), len(set(avail)))
+        self.assertIn('000', avail)
+        self.assertIn('005', avail)
+        self.assertNotIn('001', avail)
+        self.assertNotIn('117', avail)
+        self.assertEqual(data.get('pool_size'), len(avail))
+
+    def test_excludes_numeric_prefixes_already_used(self):
+        User.objects.create_user(
+            username='022_lineup', password='longenoughpw1', user_type='athlete',
+        )
+        response = self.client.get(self.url)
+        prefixes = response.json()['available_numeric_prefixes']
+        self.assertNotIn('022', prefixes)
+
+
 class RefreshTokenBlacklistTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -746,7 +774,36 @@ class HeadRosterAssignmentTests(TestCase):
         self.assertEqual(allowed.status_code, 200)
         self.assertEqual(allowed.json()['skill_team'], 'RED')
 
-    def test_roster_includes_inherited_org_color_metadata(self):
+    def test_skill_team_clear_respects_same_permissions_as_assign(self):
+        gm = User.objects.create_user(
+            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+        )
+        agm = User.objects.create_user(
+            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+        )
+        OrgLaneAssignment.objects.create(prefix='001', head_coach=agm)
+        line = User.objects.create_user(
+            username='008_Coachone', password='longenoughpw1', user_type='coach', reports_to=agm, org_lane_prefix='001',
+        )
+        athlete = User.objects.create_user(
+            username='000_Athlete1', password='longenoughpw1', user_type='athlete', primary_coach=line, org_lane_prefix='001',
+        )
+        athlete.skill_team = 'NOBLE'
+        athlete.skill_team_updated_by = gm
+        athlete.skill_team_updated_by_role = 'GMHC'
+        athlete.save(update_fields=['skill_team', 'skill_team_updated_by', 'skill_team_updated_by_role'])
+
+        self.client.force_authenticate(user=gm)
+        cleared = self.client.patch(reverse('head-athlete-skill-team', args=[athlete.id]), {'skill_team': 'NONE'}, format='json')
+        self.assertEqual(cleared.status_code, 200)
+        self.assertEqual(cleared.json()['skill_team'], '')
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.skill_team, '')
+        self.assertEqual(athlete.skill_team_updated_by_id, gm.id)
+
+        self.client.force_authenticate(user=agm)
+        blocked_clear = self.client.patch(reverse('head-athlete-skill-team', args=[athlete.id]), {'skill_team': 'NOBLE'}, format='json')
+        self.assertEqual(blocked_clear.status_code, 403)
         prefixed_head = User.objects.create_user(
             username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
         )
@@ -1384,6 +1441,7 @@ class DemoPruneCommandTests(TestCase):
             User.objects.create_user(username=username, password='pw', user_type='athlete')
         User.objects.create_user(username='docker_UAT_coach_1', password='pw', user_type='coach')
         User.objects.create_user(username='005_dockerUATAthlete1', password='pw', user_type='athlete')
+        User.objects.create_user(username='022_Athlete17', password='pw', user_type='athlete')
         User.objects.create_user(username='Adminone', password='pw', user_type='head_coach')
         User.objects.create_user(username='future_real_user', password='pw', user_type='athlete')
 
@@ -1409,6 +1467,7 @@ class DemoPruneCommandTests(TestCase):
             self.assertTrue(User.objects.filter(username=username, primary_coach__isnull=True).exists())
         self.assertFalse(User.objects.filter(username='docker_UAT_coach_1').exists())
         self.assertFalse(User.objects.filter(username='005_dockerUATAthlete1').exists())
+        self.assertFalse(User.objects.filter(username='022_Athlete17').exists())
         self.assertFalse(User.objects.filter(username='Adminone').exists())
         self.assertTrue(User.objects.filter(username='future_real_user').exists())
 

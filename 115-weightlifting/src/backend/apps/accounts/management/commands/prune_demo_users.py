@@ -137,10 +137,15 @@ def _cleanup_filter():
         'gandalf_grey',
         'Coachtwo',
     ]
+    # Canonical-stress UAT athletes (Athlete17–Athlete35) share demo-style names but are not roster canon.
+    uat_canonical_athletes = Q(
+        username__iregex=r'^\d{3}_Athlete(1[7-9]|2[0-9]|3[0-5])$',
+    )
     return (
         Q(username__in=legacy_names)
         | Q(username__contains='docker_UAT')
         | Q(username__contains='dockerUAT')
+        | uat_canonical_athletes
     )
 
 

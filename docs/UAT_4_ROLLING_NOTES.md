@@ -98,3 +98,20 @@ These should help validate that athlete auto-assignment skips unavailable normal
 ## Possible Point Of Sale
 
 Possible future POS connection. This needs careful regulatory, privacy, tax, and payment-processing review before implementation.
+
+---
+
+## Capture log (May 5, 2026, pre-exam pause)
+
+**UAT 3.0 close metrics and SSVC/ACP process** are summarized in `docs/UAT_3_SSV_ACP_CLOSE_AND_UAT4_KICKOFF.md` (artifact paths, `ssvc_metrics` fields, green bar, rebuild reminders).
+
+**Already implemented for numbering / registration (carry into UAT 4 planning only if extending):**
+
+- Athlete self-serve: smallest free prefix in `000_` or `005_`–`099_`; coaches choose `NNN_Handle` with server validation and optional **available-prefix** fetch from `GET /api/auth/register/coach-prefixes/`.
+- Docker UAT uses canonical **`Athlete17`–`Athlete35`** stress names; prune removes that numeric pattern on permanent clean.
+
+**UAT 4.0 candidates sparked by numbering work (optional):**
+
+- Head or admin UI surfacing **live prefix availability** (not only login form).
+- Audit log when coaches change handles (if ever allowed) or when head staff renames users.
+- E2E test in CI mirroring `docker_uat.py` bundle + roster checks if GitHub Actions gets a compose job.

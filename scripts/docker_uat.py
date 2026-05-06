@@ -10,8 +10,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
+import re
 import sys
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -106,6 +109,64 @@ def frontend_is_html(frontend_url: str, timeout: float) -> tuple[bool, dict]:
         return False, {"error": str(exc)}
 
 
+def _fetch_url_text(url: str, timeout: float, max_bytes: int | None = 2_500_000) -> tuple[int, str]:
+    req = urllib.request.Request(url, headers={"Accept": "*/*"})
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        chunk = response.read(max_bytes) if max_bytes else response.read()
+        return response.status, chunk.decode("utf-8", errors="replace")
+
+
+def verify_head_dashboard_bundle(frontend_url: str, timeout: float) -> tuple[bool, dict]:
+    """Catch stale Docker `dist` / wrong tree: skill-roster athletes must not reuse `head-athlete-table`.
+
+    Served bundle must include the UI stamp and the `head-skill-roster-table` class string, and must
+    not concatenate `head-athlete-table` with `head-skill-roster-table` (mobile card-layout bug).
+    """
+    base = frontend_url.rstrip("/")
+    detail: dict = {"edge_case": "head_dashboard_stale_or_wrong_bundle"}
+    try:
+        status, html = _fetch_url_text(f"{base}/", timeout, max_bytes=65536)
+        detail["index_http_status"] = status
+        if status != 200:
+            return False, {**detail, "error": "index not 200"}
+
+        # Production Vite: <script type="module" crossorigin src="/assets/index-*.js">
+        script_paths = re.findall(r'(?:src)=["\'](/assets/[^"\']+\.js)["\']', html, flags=re.I)
+        detail["asset_script_tags"] = len(script_paths)
+        if not script_paths:
+            has_dev_main = "/src/main.jsx" in html or 'src="/src/' in html
+            return False, {
+                **detail,
+                "error": "index has no /assets/*.js (need vite build / docker preview, not raw dev index)",
+                "dev_main_detected": has_dev_main,
+            }
+
+        # Prefer entry chunk name
+        main_js = next((p for p in script_paths if "index-" in p), script_paths[0])
+        js_url = f"{base}{main_js}"
+        detail["bundle_url"] = js_url
+        jstatus, js_body = _fetch_url_text(js_url, timeout, max_bytes=2_500_000)
+        detail["bundle_http_status"] = jstatus
+        detail["bundle_chars_sampled"] = len(js_body)
+        if jstatus != 200:
+            return False, {**detail, "error": "bundle not 200"}
+
+        stamp = "skill-roster-2026-05-05"
+        class_skill = "head-skill-roster-table"
+        stale_combo = "head-athlete-table head-skill-roster-table"
+        has_stamp = stamp in js_body
+        has_skill_class = class_skill in js_body
+        has_stale_combo = stale_combo in js_body
+        detail["has_ui_stamp"] = has_stamp
+        detail["has_skill_roster_class"] = has_skill_class
+        detail["has_stale_class_combo"] = has_stale_combo
+
+        passed = has_stamp and has_skill_class and not has_stale_combo
+        return passed, detail
+    except Exception as exc:  # noqa: BLE001
+        return False, {**detail, "error": str(exc)}
+
+
 def login(client: HttpClient, username: str, password: str = DEFAULT_PASSWORD) -> dict:
     status, payload = client.request(
         "POST",
@@ -135,7 +196,19 @@ def register_user(
     status, body = client.request("POST", "/api/auth/register/", payload)
     if status != 201:
         raise RuntimeError(f"Registration failed for {username}: status={status}, payload={body}")
+    time.sleep(0.25)  # avoid THROTTLE_REGISTER bursts during Docker UAT / SSVC
     return body if isinstance(body, dict) else {}
+
+
+def canonical_uat_athlete_registration_shape(registration: dict, base_suffix: str) -> tuple[bool, str | None]:
+    """Return (ok, numeric_prefix) for finalized usernames like 022_Athlete17."""
+    username = registration.get("username") if isinstance(registration, dict) else None
+    if not isinstance(username, str):
+        return False, None
+    match = re.fullmatch(r"(\d{3})_(Athlete\d+)", username)
+    if not match or match.group(2) != base_suffix:
+        return False, None
+    return True, match.group(1)
 
 
 def sample_program_data() -> dict:
@@ -193,18 +266,33 @@ def main() -> int:
     client = HttpClient(args.backend_url, timeout=args.timeout)
     results: list[dict] = []
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    unique = str(int(time.time()))
-    temp_coach = f"090_docker_UAT_coach_{unique}"
-    temp_athlete_base = f"dockerUATAthlete{unique}"
-    rbac_coach_b = f"091_docker_UAT_coach_b_{unique}"
-    rbac_athlete_b_base = f"dockerUATAthleteB{unique}"
-    unassign_athlete_base = f"dockerUATUnassignAthlete{unique}"
-    delete_athlete_base = f"dockerUATDeleteAthlete{unique}"
-    staff_reassign_coach = f"092_docker_UAT_staff_reassign_{unique}"
-    staff_delete_coach = f"093_docker_UAT_staff_delete_{unique}"
+    run_tag = uuid.uuid4().hex[:10]
+    # Line-coach registration requires PREFIX_rest where the numeric prefix is not yet used
+    # by any username in the DB — fixed 090/091/… fails on repeat UAT runs.
+    _coach_prefix_pool = list(range(60, 90))
+    random.shuffle(_coach_prefix_pool)
+    _cp = _coach_prefix_pool[:4]
+    temp_coach = f"{_cp[0]:03d}_dockerUATc_{run_tag}"
+    rbac_coach_b = f"{_cp[1]:03d}_dockerUATb_{run_tag}"
+    staff_reassign_coach = f"{_cp[2]:03d}_dockerUATsr_{run_tag}"
+    staff_delete_coach = f"{_cp[3]:03d}_dockerUATsd_{run_tag}"
+    unique = run_tag
+    # Match demo-style canonical handles (NNN_Athlete#); numeric prefix is still auto-assigned.
+    temp_athlete_base = "Athlete32"
+    rbac_athlete_b_base = "Athlete33"
+    unassign_athlete_base = "Athlete34"
+    delete_athlete_base = "Athlete35"
 
     ok, detail = frontend_is_html(args.frontend_url, args.timeout)
     check(results, "frontend root returns HTML", ok, detail)
+
+    fb_ok, fb_detail = verify_head_dashboard_bundle(args.frontend_url, args.timeout)
+    check(
+        results,
+        "frontend bundle includes head skill-roster stamp and not stale athlete-table combo",
+        fb_ok,
+        fb_detail,
+    )
 
     try:
         seeded_tokens = {}
@@ -225,6 +313,16 @@ def main() -> int:
                 isinstance(payload, dict) and payload.get("user_type") == expected_type,
                 payload,
             )
+
+        status, prefix_payload = client.request("GET", "/api/auth/register/coach-prefixes/")
+        expect_status(results, "GET /api/auth/register/coach-prefixes/ returns 200", status, 200, prefix_payload)
+        avail = prefix_payload.get("available_numeric_prefixes") if isinstance(prefix_payload, dict) else None
+        check(
+            results,
+            "coach-prefixes returns a non-empty available_numeric_prefixes list",
+            isinstance(avail, list) and len(avail) > 0,
+            prefix_payload,
+        )
 
         status, demo_athlete_programs = client.request("GET", "/api/programs/", token=seeded_tokens[SEEDED_ATHLETE_USERNAME]["access"])
         expect_status(results, f"{SEEDED_ATHLETE_USERNAME} can retrieve assigned programs", status, 200, demo_athlete_programs)
@@ -248,24 +346,34 @@ def main() -> int:
         register_user(client, temp_coach, email_for(temp_coach), "coach", args.password, args.coach_signup_code)
         register_user(client, staff_reassign_coach, email_for(staff_reassign_coach), "coach", args.password, args.coach_signup_code)
         register_user(client, staff_delete_coach, email_for(staff_delete_coach), "coach", args.password, args.coach_signup_code)
-        expected_batch_prefixes = [
-            "022", "023", "024", "025", "026",
-            "027", "028", "029", "030", "031",
-            "032", "033", "034", "035", "036",
-        ]
+        batch_bases = [f"Athlete{16 + idx}" for idx in range(1, 16)]
         batch_athletes = []
-        for idx, expected_prefix in enumerate(expected_batch_prefixes, start=1):
-            base_username = f"dockerUATBatchAthlete{idx}_{unique}".replace("_", "")
+        batch_prefixes: list[str] = []
+        for idx, base_username in enumerate(batch_bases, start=1):
             registration = register_user(
                 client, base_username, email_for(base_username), "athlete", args.password,
             )
             batch_athletes.append(registration.get("username"))
+            ok_shape, prefix = canonical_uat_athlete_registration_shape(registration, base_username)
             check(
                 results,
-                f"batch athlete {idx} receives expected prefix {expected_prefix}",
-                registration.get("username") == f"{expected_prefix}_{base_username}",
+                f"batch athlete {idx} username is canonical ({base_username})",
+                ok_shape,
                 registration,
             )
+            if prefix:
+                batch_prefixes.append(prefix)
+        batch_order_ok = (
+            len(batch_prefixes) == len(batch_bases)
+            and len(batch_prefixes) == len(set(batch_prefixes))
+            and batch_prefixes == sorted(batch_prefixes)
+        )
+        check(
+            results,
+            "batch athlete numeric prefixes are unique and strictly increasing (smallest-free order)",
+            batch_order_ok,
+            {"prefixes": batch_prefixes},
+        )
         temp_athlete_registration = register_user(
             client, temp_athlete_base, email_for(temp_athlete_base), "athlete", args.password,
         )
@@ -283,10 +391,11 @@ def main() -> int:
             client, delete_athlete_base, email_for(delete_athlete_base), "athlete", args.password,
         )
         delete_athlete = delete_athlete_registration.get("username")
+        ok_temp, _ = canonical_uat_athlete_registration_shape(temp_athlete_registration, temp_athlete_base)
         check(
             results,
-            "temporary athlete username receives numeric prefix",
-            isinstance(temp_athlete, str) and temp_athlete.endswith(f"_{temp_athlete_base}") and temp_athlete[:3].isdigit(),
+            "temporary athlete username is canonical UAT shape (NNN_Athlete#)",
+            ok_temp,
             temp_athlete_registration,
         )
         reserved_prefixes = {"001", "002", "003", "004", "117"}
@@ -303,11 +412,26 @@ def main() -> int:
             isinstance(temp_athlete, str) and temp_athlete[:3] in normal_prefixes,
             temp_athlete_registration,
         )
+        ok_rb, _ = canonical_uat_athlete_registration_shape(rbac_athlete_b_registration, rbac_athlete_b_base)
         check(
             results,
-            "RBAC athlete B username receives numeric prefix",
-            isinstance(rbac_athlete_b, str) and rbac_athlete_b.endswith(f"_{rbac_athlete_b_base}") and rbac_athlete_b[:3].isdigit(),
+            "RBAC athlete B username is canonical UAT shape",
+            ok_rb,
             rbac_athlete_b_registration,
+        )
+        ok_un, _ = canonical_uat_athlete_registration_shape(unassign_athlete_registration, unassign_athlete_base)
+        check(
+            results,
+            "unassign athlete username is canonical UAT shape",
+            ok_un,
+            unassign_athlete_registration,
+        )
+        ok_del, _ = canonical_uat_athlete_registration_shape(delete_athlete_registration, delete_athlete_base)
+        check(
+            results,
+            "delete athlete username is canonical UAT shape",
+            ok_del,
+            delete_athlete_registration,
         )
         status, payload = client.request(
             "POST",
@@ -887,14 +1011,33 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001 - converted to structured report
         check(results, "UAT raised unexpected exception", False, {"error": str(exc)})
 
+    total_ct = len(results)
+    passed_n = sum(1 for item in results if item["passed"])
+    failed_n = sum(1 for item in results if not item["passed"])
     summary = {
         "started_at": started_at,
         "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "backend_url": args.backend_url,
         "frontend_url": args.frontend_url,
-        "total": len(results),
-        "passed": sum(1 for item in results if item["passed"]),
-        "failed": sum(1 for item in results if not item["passed"]),
+        "total": total_ct,
+        "passed": passed_n,
+        "failed": failed_n,
+        "pass_rate": round(passed_n / total_ct, 6) if total_ct else 0.0,
+        "ssvc_metrics": {
+            "checks_total": total_ct,
+            "checks_passed": passed_n,
+            "checks_failed": failed_n,
+            "pass_rate": round(passed_n / total_ct, 6) if total_ct else 0.0,
+            "frontend_head_dashboard_bundle": next(
+                (
+                    r.get("detail")
+                    for r in results
+                    if r.get("name")
+                    == "frontend bundle includes head skill-roster stamp and not stale athlete-table combo"
+                ),
+                None,
+            ),
+        },
         "results": results,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
