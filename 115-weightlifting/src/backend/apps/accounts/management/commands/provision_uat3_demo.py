@@ -13,7 +13,7 @@ class Command(BaseCommand):
             'scenario',
             nargs='?',
             default='preserve_current',
-            choices=['preserve_current', 'fully_loaded', 'half_cock', 'bare_base', 'skeleton'],
+            choices=['preserve_current', 'pkg_large', 'fully_loaded', 'half_cock', 'bare_base', 'skeleton'],
             help='Demo scenario to provision.',
         )
         parser.add_argument(

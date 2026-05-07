@@ -37,26 +37,58 @@ const COACH_ACCENT_CLASSES = [
   'graphite',
 ]
 const SHOW_HEAD_ANALYTICS = false
-const EXPECTED_STANDALONE_HEAD_SUFFIXES = ['Headcoachtwo', 'Headcoachthree', 'Headcoachfour', 'Headcoachone']
-const EXPECTED_LINE_COACHES = ['008_Coachone', '013_Coachtwo', '048_Coachthree', '088_Coachtfour']
-const EXPECTED_PRIMARY_ATHLETE = '000_Athlete1'
-const EXPECTED_PRIMARY_COACH = '008_Coachone'
+/** Optional skeleton standalone heads (`118_`…`121_` style); default demo/pkg_large roster has none. */
+const EXPECTED_STANDALONE_HEAD_SUFFIXES = []
+const EXPECTED_AGM_HEAD_COACHES = [
+  '001_HeadCoach_one',
+  '002_HeadCoach_two',
+  '003_HeadCoach_three',
+  '004_HeadCoach_four',
+]
+const EXPECTED_LINE_COACHES = [
+  '008_Coach_eight',
+  '013_Coach_onethree',
+  '048_Coach_foureight',
+  '088_Coach_eighteight',
+  '022_Coach_twotwo',
+  '023_Coach_twothree',
+  '024_Coach_twofour',
+  '025_Coach_twofive',
+]
+const EXPECTED_PRIMARY_ATHLETE = '000_Athlete_zero'
+const EXPECTED_PRIMARY_COACH = '008_Coach_eight'
 const EXPECTED_UNASSIGNED_ATHLETES = [
-  '005_Athlete2',
-  '006_Athlete3',
-  '007_Athlete4',
-  '009_Athlete5',
-  '010_Athlete6',
-  '011_Athlete7',
-  '012_Athlete8',
-  '014_Athlete9',
-  '015_Athlete10',
-  '016_Athlete11',
-  '017_Athlete12',
-  '018_Athlete13',
-  '019_Athlete14',
-  '020_Athlete15',
-  '021_Athlete16',
+  '005_Athlete_five',
+  '006_Athlete_six',
+  '007_Athlete_seven',
+  '009_Athlete_nine',
+  '010_Athlete_onezero',
+  '011_Athlete_oneone',
+  '012_Athlete_onetwo',
+  '014_Athlete_onefour',
+  '015_Athlete_onefive',
+  '016_Athlete_onesix',
+  '017_Athlete_oneseven',
+  '018_Athlete_oneeight',
+  '019_Athlete_onenine',
+  '020_Athlete_twozero',
+  '021_Athlete_twoone',
+  '026_Athlete_twosix',
+  '027_Athlete_twoseven',
+  '028_Athlete_twoeight',
+  '029_Athlete_twonine',
+  '030_Athlete_threezero',
+  '031_Athlete_threeone',
+  '032_Athlete_threetwo',
+  '033_Athlete_threethree',
+  '034_Athlete_threefour',
+  '035_Athlete_threefive',
+  '036_Athlete_threesix',
+  '037_Athlete_threeseven',
+  '038_Athlete_threeeight',
+  '039_Athlete_threenine',
+  '040_Athlete_fourzero',
+  '041_Athlete_fourone',
 ]
 const AGM_CATEGORY_OPTIONS = [
   { prefix: 'XXX_UNASSIGNED', label: 'XXX_UNASSIGNED' },
@@ -69,7 +101,7 @@ const HEAD_CATEGORY_LINKS = [
   {
     prefix: '117',
     label: '117_MASTER_CHIEF',
-    username: '117_HeadcoachGM',
+    username: '117_HeadCoachGM',
     status: 'Global admin: the boss',
     colorKey: 'sage-green',
     to: '/head',
@@ -496,7 +528,10 @@ const HeadCoachDashboard = () => {
     const staffByUsername = new Map(roster.staff.map((s) => [s.username, s]))
     const athleteByUsername = new Map(roster.athletes.map((a) => [a.username, a]))
     const missingHeads = []
-    if (!headByUsername.has('117_HeadcoachGM')) missingHeads.push('117_HeadcoachGM')
+    if (!headByUsername.has('117_HeadCoachGM')) missingHeads.push('117_HeadCoachGM')
+    EXPECTED_AGM_HEAD_COACHES.forEach((username) => {
+      if (!headByUsername.has(username)) missingHeads.push(username)
+    })
     const managedHeads = EXPECTED_STANDALONE_HEAD_SUFFIXES.map((suffix) => (
       roster.headCoaches.find((h) => h.username.endsWith(`_${suffix}`))
     ))
@@ -508,7 +543,7 @@ const HeadCoachDashboard = () => {
       row.org_label !== 'XXX_UNASSIGNED' && !AGM_CATEGORY_OPTIONS.some((opt) => opt.prefix === row.org_prefix)
     ))
     const validLineCoachHeadUsernames = new Set([
-      '117_HeadcoachGM',
+      '117_HeadCoachGM',
       ...roster.headCoaches
         .filter((h) => AGM_CATEGORY_OPTIONS.some((opt) => opt.prefix !== 'XXX_UNASSIGNED' && opt.prefix === h.org_prefix))
         .map((h) => h.username),
@@ -542,7 +577,7 @@ const HeadCoachDashboard = () => {
       return
     }
     if (invalidLineCoachAssignments.length > 0) {
-      window.alert(`Error: line coaches not assigned to @117_HeadcoachGM or an active AGM head coach: ${invalidLineCoachAssignments.join(', ')}`)
+      window.alert(`Error: line coaches not assigned to @117_HeadCoachGM or an active AGM head coach: ${invalidLineCoachAssignments.join(', ')}`)
       return
     }
     if (!athlete || athlete.primary_coach_username !== EXPECTED_PRIMARY_COACH) {

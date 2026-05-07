@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import random
 import os
 from dataclasses import dataclass
@@ -11,11 +12,20 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import OrgLaneAssignment
+from apps.accounts.canonical_usernames import (
+    ALL_DEMO_RESERVED_MEMBER_PREFIXES,
+    CANONICAL_ATHLETE_PREFIXES_32,
+    DEMO_STANDALONE_HEAD_COACH_USERNAMES,
+    LEGACY_USERNAME_TO_CANONICAL,
+    agm_head_username,
+    athlete_username,
+)
 from apps.accounts.org_labels import (
     AGM_PREFIXES,
     DEMO_ATHLETE_USERNAME,
     DEMO_COACH_USERNAME,
     DEMO_HEAD_COACH_USERNAMES,
+    DEMO_LINE_COACH_SLOT_B_USERNAMES,
     DEMO_LINE_COACH_USERNAMES,
     DEMO_UNASSIGNED_ATHLETE_USERNAMES,
     GM_PREFIX,
@@ -77,23 +87,50 @@ def _ensure_user(username: str, user_type: str, *, password: str = PASSWORD) -> 
     return user
 
 
-def _head_suffix(index: int) -> str:
-    return ('Headcoachone', 'Headcoachtwo', 'Headcoachthree', 'Headcoachfour')[index]
+_CANONICAL_LINE_COACH_SLOTS = 8
+
+
+def _migrate_demo_username(old_username: str, new_username: str) -> None:
+    """Rename or merge a demo user into canonical handles (same rules as ``prune_demo_users``)."""
+    old_user = User.objects.filter(username=old_username).first()
+    if old_user is None:
+        return
+    new_user = User.objects.filter(username=new_username).first()
+    if new_user is None:
+        old_user.username = new_username
+        old_user.save(update_fields=['username'])
+        return
+    User.objects.filter(reports_to=old_user).update(reports_to=new_user)
+    User.objects.filter(primary_coach=old_user).update(primary_coach=new_user)
+    TrainingProgram.objects.filter(coach=old_user).update(
+        coach=new_user,
+        updated_at=timezone.now(),
+    )
+    old_user.email = f'archived_{old_user.pk}@{DEMO_EMAIL_DOMAIN}'
+    old_user.is_active = False
+    old_user.save(update_fields=['email', 'is_active'])
 
 
 def _coach_username(index: int) -> str:
-    if index < len(DEMO_LINE_COACH_USERNAMES):
-        return DEMO_LINE_COACH_USERNAMES[index]
-    prefix = f'{22 + index:03d}'
-    return f'{prefix}_Coach{index + 1}'
+    """Lanes 001–004: slot-A/B alternate; extra coaches use prefix ``026+`` with verbal suffix."""
+    if index < _CANONICAL_LINE_COACH_SLOTS:
+        lane_slot = index // 2
+        if index % 2 == 0:
+            return DEMO_LINE_COACH_USERNAMES[lane_slot]
+        return DEMO_LINE_COACH_SLOT_B_USERNAMES[lane_slot]
+    from apps.accounts.canonical_usernames import coach_username
+
+    extra = index - _CANONICAL_LINE_COACH_SLOTS
+    candidate = 26 + extra
+    return coach_username(f'{candidate:03d}')
 
 
 def _athlete_username(index: int) -> str:
-    prefix_pool = ['000', *[f'{prefix:03d}' for prefix in range(5, 100)]]
-    reserved = {username.split('_', 1)[0] for username in DEMO_LINE_COACH_USERNAMES}
+    prefix_pool = ['000', *[f'{p:03d}' for p in range(5, 100)]]
+    reserved = ALL_DEMO_RESERVED_MEMBER_PREFIXES
     available = [prefix for prefix in prefix_pool if prefix not in reserved]
     prefix = available[index] if index < len(available) else f'{200 + index:03d}'
-    return f'{prefix}_UAT3Athlete{index + 1:03d}'
+    return athlete_username(prefix)
 
 
 def _apply_demographics(athlete: User, *, scenario: str, skill_team: str, index: int) -> None:
@@ -139,6 +176,78 @@ def _program_data(week_start: date, intensity: float) -> dict:
     }
 
 
+def _parse_intensity_pct(exercise: dict) -> float:
+    raw = str(exercise.get('intensity') or '70%').replace('%', '').strip()
+    try:
+        return max(35.0, min(105.0, float(raw)))
+    except ValueError:
+        return 70.0
+
+
+def tier_simulated_result(exercise: dict, profile: dict, rng: random.Random) -> str:
+    """Human-readable load line from prescription intensity × tier-scaled profile."""
+    pct = _parse_intensity_pct(exercise)
+    sn_lo, sn_hi = profile['snatch']
+    cj_lo, cj_hi = profile['clean_jerk']
+    sn_mid = (float(sn_lo) + float(sn_hi)) / 2.0
+    cj_mid = (float(cj_lo) + float(cj_hi)) / 2.0
+    name = (exercise.get('name') or '').lower()
+    if 'snatch' in name:
+        base = sn_mid
+    elif 'clean' in name and 'pull' in name:
+        base = cj_mid * 1.08
+    elif 'clean' in name or 'jerk' in name:
+        base = cj_mid * 0.92
+    elif 'squat' in name:
+        base = max(sn_mid, cj_mid * 0.55) * 1.35
+    else:
+        base = sn_mid
+    kg = base * (pct / 100.0) * rng.uniform(0.96, 1.04)
+    kg = max(15.0, round(kg, 1))
+    sets = exercise.get('sets', '?')
+    reps = exercise.get('reps', '?')
+    return f'{kg} kg × {sets}×{reps} @ ~{int(pct)}% prescription'
+
+
+def full_completion_entries(program_data: dict, profile: dict, rng: random.Random) -> dict:
+    entries: dict[str, dict] = {}
+    days = program_data.get('days') or []
+    for di, day in enumerate(days):
+        day_entries: dict[str, dict] = {}
+        for ei, ex in enumerate(day.get('exercises') or []):
+            day_entries[str(ei)] = {
+                'completed': True,
+                'result': tier_simulated_result(ex, profile, rng),
+                'athlete_notes': 'Demo seed — simulated prescription.',
+            }
+        entries[str(di)] = day_entries
+    return {'entries': entries}
+
+
+def partial_completion_entries(program_data: dict, profile: dict, rng: random.Random) -> dict:
+    """Leave roughly half of day×exercise cells incomplete for dashboard contrast."""
+    entries: dict[str, dict] = {}
+    days = program_data.get('days') or []
+    positions = [(di, ei) for di, day in enumerate(days) for ei, _ in enumerate(day.get('exercises') or [])]
+    complete_positions: set[tuple[int, int]] = set()
+    if positions:
+        complete_positions = set(rng.sample(positions, k=max(1, len(positions) // 2)))
+    for di, day in enumerate(days):
+        exercises = day.get('exercises') or []
+        day_entries: dict[str, dict] = {}
+        for ei, ex in enumerate(exercises):
+            if (di, ei) in complete_positions:
+                day_entries[str(ei)] = {
+                    'completed': True,
+                    'result': tier_simulated_result(ex, profile, rng),
+                    'athlete_notes': 'Demo seed — partial week.',
+                }
+            else:
+                day_entries[str(ei)] = {'completed': False, 'result': '', 'athlete_notes': ''}
+        entries[str(di)] = day_entries
+    return {'entries': entries}
+
+
 def _seed_programs_and_history(athletes: list[User], *, scenario: str, replace: bool) -> tuple[int, int, int]:
     if not athletes:
         return (0, 0, 0)
@@ -151,13 +260,13 @@ def _seed_programs_and_history(athletes: list[User], *, scenario: str, replace: 
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
     programs = []
-    completions = []
+    programs_this_run: dict[int, list[TrainingProgram]] = defaultdict(list)
     prs = []
     workouts = []
     for athlete in athletes:
         rng = _rng_for(scenario, athlete.username, 'history')
         coach = athlete.primary_coach or User.objects.get(username=MASTER_HEAD_USERNAME)
-        program_count = rng.randint(3, 12)
+        program_count = rng.randint(3, 13)
         for idx in range(program_count):
             start = week_start - timedelta(days=7 * (program_count - idx))
             style = STYLE_ROTATION[idx % len(STYLE_ROTATION)]
@@ -173,6 +282,7 @@ def _seed_programs_and_history(athletes: list[User], *, scenario: str, replace: 
                 program_data=_program_data(start, 0.66 + min(idx, 6) * 0.025),
             )
             programs.append(program)
+            programs_this_run[athlete.id].append(program)
         profile = profile_for_skill_team(
             username=athlete.username,
             skill_team=athlete.skill_team,
@@ -190,15 +300,30 @@ def _seed_programs_and_history(athletes: list[User], *, scenario: str, replace: 
         workouts.extend(athlete_workouts)
 
     TrainingProgram.objects.bulk_create(programs, batch_size=500)
-    for program in TrainingProgram.objects.filter(athlete_id__in=athlete_ids, name__contains='--').order_by('id'):
-        completions.append(
-            ProgramCompletion(
-                program=program,
-                athlete=program.athlete,
-                completion_data={'entries': {'0': {'0': {'completed': True, 'result': 'done', 'athlete_notes': 'Seeded UAT completion'}}}},
-            )
+    completions = []
+    for athlete in athletes:
+        plist = programs_this_run.get(athlete.id, [])
+        if not plist:
+            continue
+        profile = profile_for_skill_team(
+            username=athlete.username,
+            skill_team=athlete.skill_team,
+            gender=athlete.gender,
+            bodyweight_kg=athlete.bodyweight_kg,
         )
-    ProgramCompletion.objects.bulk_create(completions, batch_size=500, ignore_conflicts=True)
+        inc_rng = _rng_for(scenario, athlete.username, 'incomplete_program_idx')
+        incomplete_idx = inc_rng.randint(0, len(plist) - 1)
+        for idx, program in enumerate(plist):
+            pdata = program.program_data if isinstance(program.program_data, dict) else {}
+            crng = _rng_for(scenario, athlete.username, 'completion', program.pk)
+            if idx == incomplete_idx:
+                completion_payload = partial_completion_entries(pdata, profile, crng)
+            else:
+                completion_payload = full_completion_entries(pdata, profile, crng)
+            completions.append(
+                ProgramCompletion(program=program, athlete=athlete, completion_data=completion_payload),
+            )
+    ProgramCompletion.objects.bulk_create(completions, batch_size=500)
     PersonalRecord.objects.bulk_create(prs, batch_size=2500)
     WorkoutLog.objects.bulk_create(workouts, batch_size=2500)
     return (len(programs), len(prs), len(workouts))
@@ -217,26 +342,83 @@ def _reset_active_assignments() -> None:
     OrgLaneAssignment.objects.all().delete()
 
 
-def _preserve_current(gm: User, *, password: str = PASSWORD) -> list[User]:
-    lane_heads = {}
-    for idx, lane in enumerate(LANES):
-        head = _ensure_user(f'{lane}_{_head_suffix(idx)}', 'head_coach', password=password)
+def _provision_pkg_large(gm: User, *, password: str = PASSWORD) -> list[User]:
+    """Baseline LARGE roster: 4 AGM heads, 8 line coaches, 32 canonically named athletes."""
+    lane_heads: dict[str, User] = {}
+    for lane in LANES:
+        head = _ensure_user(agm_head_username(lane), 'head_coach', password=password)
         head.org_lane_prefix = lane
         head.save()
         lane_heads[lane] = head
 
-    for idx, username in enumerate(DEMO_LINE_COACH_USERNAMES):
-        lane = LANES[idx % len(LANES)]
-        coach = _ensure_user(username, 'coach', password=password)
-        coach.reports_to = lane_heads[lane]
-        coach.org_lane_prefix = lane
-        coach.save()
-    existing_athletes = User.objects.filter(user_type='athlete', is_active=True)
-    if not existing_athletes.exists():
-        coaches = list(User.objects.filter(user_type='coach', is_active=True).order_by('username'))
-        for idx, username in enumerate([DEMO_ATHLETE_USERNAME, *DEMO_UNASSIGNED_ATHLETE_USERNAMES]):
+    coaches_flat: list[User] = []
+    for idx, lane in enumerate(LANES):
+        head = lane_heads[lane]
+        for username in (DEMO_LINE_COACH_USERNAMES[idx], DEMO_LINE_COACH_SLOT_B_USERNAMES[idx]):
+            coach = _ensure_user(username, 'coach', password=password)
+            coach.reports_to = head
+            coach.org_lane_prefix = lane
+            coach.save()
+            coaches_flat.append(coach)
+
+    athletes_out: list[User] = []
+    for i, pfx in enumerate(CANONICAL_ATHLETE_PREFIXES_32):
+        uname = athlete_username(pfx)
+        athlete = _ensure_user(uname, 'athlete', password=password)
+        athlete.primary_coach = coaches_flat[i % len(coaches_flat)]
+        athlete.org_lane_prefix = athlete.primary_coach.org_lane_prefix or ''
+        _apply_demographics(athlete, scenario='pkg_large', skill_team=SKILL_TEAMS[i % len(SKILL_TEAMS)], index=i)
+        athlete.skill_team_updated_by = gm
+        athlete.save()
+        athletes_out.append(athlete)
+
+    for lane, head in lane_heads.items():
+        OrgLaneAssignment.objects.update_or_create(prefix=lane, defaults={'head_coach': head, 'updated_by': gm})
+
+    demo_coach = User.objects.filter(username=DEMO_COACH_USERNAME, user_type='coach', is_active=True).first()
+    if demo_coach:
+        primary_demo = User.objects.filter(username=DEMO_ATHLETE_USERNAME, user_type='athlete').first()
+        if primary_demo:
+            primary_demo.primary_coach = demo_coach
+            primary_demo.org_lane_prefix = ''
+            primary_demo.save(update_fields=['primary_coach', 'org_lane_prefix'])
+        for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
+            row = User.objects.filter(username=username, user_type='athlete').first()
+            if row:
+                row.primary_coach = None
+                row.org_lane_prefix = ''
+                row.save(update_fields=['primary_coach', 'org_lane_prefix'])
+
+    return athletes_out
+
+
+def _preserve_current(gm: User, *, password: str = PASSWORD) -> list[User]:
+    _migrate_demo_username('121_Headcoachfive', '121_Headcoachone')
+    _migrate_demo_username('001_Headcoachfive', '001_Headcoachone')
+    for old_name, new_name in LEGACY_USERNAME_TO_CANONICAL:
+        _migrate_demo_username(old_name, new_name)
+
+    lane_heads = {}
+    for lane in LANES:
+        head = _ensure_user(agm_head_username(lane), 'head_coach', password=password)
+        head.org_lane_prefix = lane
+        head.save()
+        lane_heads[lane] = head
+
+    for idx, lane in enumerate(LANES):
+        head = lane_heads[lane]
+        for username in (DEMO_LINE_COACH_USERNAMES[idx], DEMO_LINE_COACH_SLOT_B_USERNAMES[idx]):
+            coach = _ensure_user(username, 'coach', password=password)
+            coach.reports_to = head
+            coach.org_lane_prefix = lane
+            coach.save()
+    coaches = list(User.objects.filter(user_type='coach', is_active=True).order_by('username'))
+    canon_athlete_list = [DEMO_ATHLETE_USERNAME, *DEMO_UNASSIGNED_ATHLETE_USERNAMES]
+    for idx, username in enumerate(canon_athlete_list):
+        existed_before = User.objects.filter(username=username).exists()
+        athlete = _ensure_user(username, 'athlete', password=password)
+        if not existed_before:
             coach = coaches[idx % len(coaches)] if coaches else gm
-            athlete = _ensure_user(username, 'athlete', password=password)
             athlete.primary_coach = coach
             athlete.org_lane_prefix = coach.org_lane_prefix or GM_PREFIX
             _apply_demographics(athlete, scenario='preserve_current', skill_team=SKILL_TEAMS[idx % len(SKILL_TEAMS)], index=idx)
@@ -281,9 +463,7 @@ def _preserve_current(gm: User, *, password: str = PASSWORD) -> list[User]:
                 'skill_team_updated_at',
             ]
         )
-    # Docker UAT / SSVC expect this exact pool: one athlete on DEMO_COACH, fifteen unassigned
-    # (XXX_UNASSIGNED roster metadata). Do not skip when other athletes already exist — partial UAT
-    # runs leave the DB inconsistent otherwise.
+    # Docker UAT / SSVC: primary athlete on DEMO_COACH; remaining canon athletes XXX_UNASSIGNED.
     demo_coach = User.objects.filter(username=DEMO_COACH_USERNAME, user_type='coach', is_active=True).first()
     if demo_coach:
         primary_demo = User.objects.filter(username=DEMO_ATHLETE_USERNAME, user_type='athlete').first()
@@ -303,9 +483,18 @@ def _preserve_current(gm: User, *, password: str = PASSWORD) -> list[User]:
 
 def provision_uat3_scenario(*, scenario: str, replace_history: bool = True, password: str = PASSWORD) -> ScenarioResult:
     scenario = scenario.replace('-', '_').lower()
-    aliases = {'fully_loaded': 'fully_loaded', 'half_cock': 'half_cock', 'bare_base': 'bare_base', 'skeleton': 'skeleton', 'preserve_current': 'preserve_current'}
+    aliases = {
+        'fully_loaded': 'fully_loaded',
+        'half_cock': 'half_cock',
+        'bare_base': 'bare_base',
+        'skeleton': 'skeleton',
+        'preserve_current': 'preserve_current',
+        'pkg_large': 'pkg_large',
+    }
     if scenario not in aliases:
-        raise ValueError('Unknown scenario. Choose fully_loaded, half_cock, bare_base, skeleton, or preserve_current.')
+        raise ValueError(
+            'Unknown scenario. Choose preserve_current, pkg_large, fully_loaded, half_cock, bare_base, or skeleton.',
+        )
 
     with transaction.atomic():
         gm = _ensure_user(MASTER_HEAD_USERNAME, 'head_coach', password=password)
@@ -313,20 +502,22 @@ def provision_uat3_scenario(*, scenario: str, replace_history: bool = True, pass
         gm.save()
         if scenario == 'preserve_current':
             athletes = _preserve_current(gm, password=password)
+        elif scenario == 'pkg_large':
+            _reset_active_assignments()
+            athletes = _provision_pkg_large(gm, password=password)
         else:
             _reset_active_assignments()
             lane_heads: dict[str, User] = {}
             if scenario == 'bare_base':
-                head_plan: list[tuple[str, str]] = []
+                heads_to_create: list[tuple[str, str]] = []
             elif scenario == 'half_cock':
-                head_plan = [('001', 'Headcoachone'), ('003', 'Headcoachtwo')]
+                heads_to_create = [('001', agm_head_username('001')), ('003', agm_head_username('003'))]
             elif scenario == 'skeleton':
-                head_plan = []
+                heads_to_create = []
             else:
-                head_plan = [(lane, _head_suffix(idx)) for idx, lane in enumerate(LANES)]
+                heads_to_create = [(lane, agm_head_username(lane)) for lane in LANES]
 
-            for lane, suffix in head_plan:
-                username = f'{lane}_{suffix}'
+            for lane, username in heads_to_create:
                 head = _ensure_user(username, 'head_coach', password=password)
                 head.org_lane_prefix = lane
                 head.save()
@@ -337,9 +528,7 @@ def provision_uat3_scenario(*, scenario: str, replace_history: bool = True, pass
                 lane_heads['004'] = lane_heads['003']
 
             if scenario == 'skeleton':
-                for username in DEMO_HEAD_COACH_USERNAMES:
-                    if username == MASTER_HEAD_USERNAME:
-                        continue
+                for username in DEMO_STANDALONE_HEAD_COACH_USERNAMES:
                     skeleton_head = _ensure_user(username, 'head_coach', password=password)
                     skeleton_head.org_lane_prefix = ''
                     skeleton_head.save()
@@ -384,7 +573,12 @@ def provision_uat3_scenario(*, scenario: str, replace_history: bool = True, pass
                                 athlete = _ensure_user(_athlete_username(athlete_index), 'athlete', password=password)
                                 athlete.primary_coach = None if scenario == 'skeleton' else coach
                                 athlete.org_lane_prefix = '' if scenario == 'skeleton' else lane
-                                _apply_demographics(athlete, scenario=scenario, skill_team='' if scenario == 'skeleton' else skill_team, index=athlete_index)
+                                _apply_demographics(
+                                    athlete,
+                                    scenario=scenario,
+                                    skill_team='' if scenario == 'skeleton' else skill_team,
+                                    index=athlete_index,
+                                )
                                 if scenario != 'skeleton':
                                     athlete.skill_team_updated_by = gm
                                 athlete.save()

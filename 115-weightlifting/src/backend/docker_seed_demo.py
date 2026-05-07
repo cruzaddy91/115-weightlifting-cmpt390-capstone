@@ -7,10 +7,12 @@ from django.utils import timezone
 
 from apps.athletes.long_history_seed import seed_longterm_for_usernames
 from apps.athletes.models import ProgramCompletion
+from apps.accounts.canonical_usernames import LEGACY_USERNAME_TO_CANONICAL
 from apps.accounts.org_labels import (
     DEMO_ATHLETE_USERNAME,
     DEMO_COACH_USERNAME,
     DEMO_HEAD_COACH_USERNAMES,
+    DEMO_LINE_COACH_SLOT_B_USERNAMES,
     DEMO_LINE_COACH_USERNAMES,
     DEMO_UNASSIGNED_ATHLETE_USERNAMES,
     MASTER_HEAD_USERNAME,
@@ -23,8 +25,11 @@ DEMO_EMAIL_DOMAIN = os.environ.get('DEMO_EMAIL_DOMAIN', 'example.invalid')
 
 
 def assigned_head_variants(username):
+    prefix = username.split('_', 1)[0]
+    if prefix in {'001', '002', '003', '004', '117'}:
+        return []
     suffix = username.split('_', 1)[1]
-    return [f'{prefix}_{suffix}' for prefix in ('001', '002', '003', '004')]
+    return [f'{lane}_{suffix}' for lane in ('001', '002', '003', '004')]
 
 
 def migrate_user_identity(old_username, new_username):
@@ -117,17 +122,15 @@ legacy_demo_usernames = [
     'Coachtwo',
 ]
 
-migrate_user_identity('117_Headcoachone', MASTER_HEAD_USERNAME)
 migrate_user_identity('121_Headcoachfive', '121_Headcoachone')
 migrate_user_identity('001_Headcoachfive', '001_Headcoachone')
-migrate_user_identity('045_Coachone', '008_Coachone')
-migrate_user_identity('034_Coachtwo', '013_Coachtwo')
-migrate_user_identity('088_Coachthree', '048_Coachthree')
-migrate_user_identity('013_Coachfour', '088_Coachtfour')
+
+for old_u, new_u in LEGACY_USERNAME_TO_CANONICAL:
+    migrate_user_identity(old_u, new_u)
 
 head, _ = User.objects.get_or_create(username=MASTER_HEAD_USERNAME, defaults={'user_type': 'head_coach'})
 head.user_type = 'head_coach'
-head.email = f'117_headcoachgm@{DEMO_EMAIL_DOMAIN}'
+head.email = f'{MASTER_HEAD_USERNAME.lower()}@{DEMO_EMAIL_DOMAIN}'
 head.is_active = True
 head.set_password(PASSWORD)
 head.save()
@@ -165,7 +168,7 @@ for username in DEMO_HEAD_COACH_USERNAMES:
     head_coach.save()
 
 line_coaches = {}
-for username in DEMO_LINE_COACH_USERNAMES:
+for username in (*DEMO_LINE_COACH_USERNAMES, *DEMO_LINE_COACH_SLOT_B_USERNAMES):
     coach, _ = User.objects.get_or_create(username=username, defaults={'user_type': 'coach'})
     coach.user_type = 'coach'
     coach.email = f'{username.lower()}@{DEMO_EMAIL_DOMAIN}'

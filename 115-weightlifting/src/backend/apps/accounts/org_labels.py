@@ -1,40 +1,16 @@
 import re
 
-
-MASTER_HEAD_USERNAME = '117_HeadcoachGM'
-MASTER_HEAD_LABEL = '117_MASTER_CHIEF'
-DEMO_HEAD_COACH_USERNAMES = (
-    MASTER_HEAD_USERNAME,
-    '118_Headcoachtwo',
-    '119_Headcoachthree',
-    '120_Headcoachfour',
-    '121_Headcoachone',
-)
-DEMO_COACH_USERNAME = '008_Coachone'
-DEMO_LINE_COACH_USERNAMES = (
+from apps.accounts.canonical_usernames import (
+    DEMO_ATHLETE_USERNAME,
     DEMO_COACH_USERNAME,
-    '013_Coachtwo',
-    '048_Coachthree',
-    '088_Coachtfour',
+    DEMO_HEAD_COACH_USERNAMES,
+    DEMO_LINE_COACH_SLOT_B_USERNAMES,
+    DEMO_LINE_COACH_USERNAMES,
+    DEMO_UNASSIGNED_ATHLETE_USERNAMES,
+    MASTER_HEAD_USERNAME,
 )
-DEMO_ATHLETE_USERNAME = '000_Athlete1'
-DEMO_UNASSIGNED_ATHLETE_USERNAMES = (
-    '005_Athlete2',
-    '006_Athlete3',
-    '007_Athlete4',
-    '009_Athlete5',
-    '010_Athlete6',
-    '011_Athlete7',
-    '012_Athlete8',
-    '014_Athlete9',
-    '015_Athlete10',
-    '016_Athlete11',
-    '017_Athlete12',
-    '018_Athlete13',
-    '019_Athlete14',
-    '020_Athlete15',
-    '021_Athlete16',
-)
+
+MASTER_HEAD_LABEL = '117_MASTER_CHIEF'
 
 GM_PREFIX = '117'
 AGM_PREFIXES = {'001', '002', '003', '004'}

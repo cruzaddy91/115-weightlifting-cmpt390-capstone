@@ -207,8 +207,8 @@ flowchart TB
 | Artifact | Purpose |
 | ---------- | --------- |
 | \`docker_uat_latest.json\` | Full SSVC / API acceptance transcript: per-check outcomes, timing, \`ssvc_metrics\`, and \`frontend_head_dashboard_bundle\` (detects stale Vite \`dist\` vs current Head Dashboard sources). |
-| \`auth_stress_008_coachone_latest.json\` | Repeated obtain / refresh for line coach \`008_Coachone\`; surfaces throttle or token rotation defects. |
-| \`auth_stress_000_athlete1_latest.json\` | Same pattern for athlete \`000_Athlete1\`. |
+| \`auth_stress_008_coach_eight_latest.json\` | Repeated obtain / refresh for line coach \`008_Coach_eight\`; surfaces throttle or token rotation defects. |
+| \`auth_stress_000_athlete_zero_latest.json\` | Same pattern for athlete \`000_Athlete_zero\`. |
 | \`ssvc_clean_before_uat_latest.txt\` | Output of \`prune_demo_users --apply --permanent-clean\` **before** the HTTP suite — canonical roster baseline. |
 | \`ssvc_clean_after_uat_latest.txt\` | Same command **after** the suite — removes registrations created during SSVC. |
 | \`compose_config_latest.txt\` | Rendered \`docker compose config\` (authoritative merged stack definition). |
@@ -358,8 +358,8 @@ Base URL for JSON: **\`$BACKEND_URL\`**
 
 \`\`\`text
 docker_uat_latest.json
-auth_stress_008_coachone_latest.json
-auth_stress_000_athlete1_latest.json
+auth_stress_008_coach_eight_latest.json
+auth_stress_000_athlete_zero_latest.json
 ssvc_clean_before_uat_latest.txt
 ssvc_clean_after_uat_latest.txt
 compose_config_latest.txt
@@ -419,21 +419,21 @@ python3 "$ROOT_DIR/scripts/docker_uat.py" \
   --coach-signup-code "$UAT_COACH_SIGNUP_CODE" \
   > "$REPORT_DIR/docker_uat_latest.json"
 
-echo "Running auth stress for 008_Coachone..."
+echo "Running auth stress for 008_Coach_eight..."
 python3 "$ROOT_DIR/scripts/docker_auth_stress.py" \
   --backend-url "$BACKEND_URL" \
-  --username "008_Coachone" \
+  --username "008_Coach_eight" \
   --password "$DEMO_PASSWORD" \
   --cycles "$STRESS_CYCLES" \
-  > "$REPORT_DIR/auth_stress_008_coachone_latest.json"
+  > "$REPORT_DIR/auth_stress_008_coach_eight_latest.json"
 
-echo "Running auth stress for 000_Athlete1..."
+echo "Running auth stress for 000_Athlete_zero..."
 python3 "$ROOT_DIR/scripts/docker_auth_stress.py" \
   --backend-url "$BACKEND_URL" \
-  --username "000_Athlete1" \
+  --username "000_Athlete_zero" \
   --password "$DEMO_PASSWORD" \
   --cycles "$STRESS_CYCLES" \
-  > "$REPORT_DIR/auth_stress_000_athlete1_latest.json"
+  > "$REPORT_DIR/auth_stress_000_athlete_zero_latest.json"
 
 echo "Running SSVC cleanup after UAT..."
 docker compose exec -T backend python manage.py prune_demo_users \

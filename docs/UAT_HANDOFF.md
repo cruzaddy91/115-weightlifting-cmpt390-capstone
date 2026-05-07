@@ -9,7 +9,7 @@ UAT 1.0 is a success. The Docker-first review stack now has a stable GM dashboar
 The current branch is the base for UAT 2.0:
 
 - Branch: `dev/ssvc-acp-cabinet`
-- GM account: `117_HeadcoachGM`
+- GM account: `117_HeadCoachGM`
 - GM category tag: `117_MASTER_CHIEF`
 - AGM category lanes: `001_INFINITY`, `002_REACH`, `003_FORERUNNER`, `004_ODST`
 - Holding category: `XXX_UNASSIGNED`
@@ -18,18 +18,20 @@ The current branch is the base for UAT 2.0:
 
 The current category model is prefix-driven and should be treated as the foundation for UAT 2.0.
 
-- `117_` is the GM lane. `117_HeadcoachGM` is the administrative boss and can also directly coach if needed.
+- `117_` is the GM lane. `117_HeadCoachGM` is the administrative boss and can also directly coach if needed.
 - `001_` through `004_` are AGM/head-coach lanes. These are team categories and own their downstream tag propagation.
 - `XXX_UNASSIGNED` is the intake/holding state for active head coaches, line coaches, and athletes that are not currently attached to a GM/AGM/team.
 - Normal member prefixes are `000_` and `005_` through `099_`. Reserved org prefixes `001_`, `002_`, `003_`, `004_`, and `117_` are blocked for athlete auto-assignment and line-coach self-selection.
 
-Current canonical demo roster:
+Current canonical demo roster (see [`canonical_usernames.py`](../115-weightlifting/src/backend/apps/accounts/canonical_usernames.py); LARGE localhost merge typically uses **`pkg_large`**: 1 GM + 4 AGM lane heads + 8 line coaches + 32 athletes):
 
-- GM: `117_HeadcoachGM`
-- Standalone head coaches: `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachone`
-- Line coaches: `008_Coachone`, `013_Coachtwo`, `048_Coachthree`, `088_Coachtfour`
-- Assigned primary athlete: `000_Athlete1`
-- Unassigned athlete pool: `005_Athlete2` through `021_Athlete16`, skipping `008_` and `013_` because line coaches own those prefixes
+- GM: `117_HeadCoachGM`
+- AGM lane heads (`001`–`004`): `001_HeadCoach_one`, `002_HeadCoach_two`, `003_HeadCoach_three`, `004_HeadCoach_four`
+- Line coaches (slot A / slot B): `008_Coach_eight`, `013_Coach_onethree`, `048_Coach_foureight`, `088_Coach_eighteight`, `022_Coach_twotwo`, `023_Coach_twothree`, `024_Coach_twofour`, `025_Coach_twofive`
+- Assigned primary athlete: `000_Athlete_zero`
+- Other seeded athletes: **31** accounts using the remaining normal-member prefixes after skipping GM/AGM/coach reservations (`005_Athlete_five`, `006_Athlete_six`, …, `041_Athlete_fourone` — full tuple `CANONICAL_ATHLETE_PREFIXES_32` in code)
+
+Optional inactive skeleton standalone heads (`118_`–`121_`) can be provisioned separately; the default **`pkg_large`** baseline does not include them.
 
 Tag propagation currently works as follows:
 

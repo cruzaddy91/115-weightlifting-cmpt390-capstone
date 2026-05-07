@@ -1,4 +1,6 @@
 import os
+import random
+from datetime import date
 from decimal import Decimal
 from unittest import mock
 
@@ -7,9 +9,16 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from apps.accounts import demo_provisioning as demo_provisioning_mod
 from apps.accounts.demo_provisioning import provision_uat3_scenario
 from apps.accounts.models import OrgLaneAssignment
-from apps.accounts.org_labels import DEMO_UNASSIGNED_ATHLETE_USERNAMES
+from apps.accounts.org_labels import (
+    DEMO_ATHLETE_USERNAME,
+    DEMO_COACH_USERNAME,
+    DEMO_LINE_COACH_SLOT_B_USERNAMES,
+    DEMO_LINE_COACH_USERNAMES,
+    DEMO_UNASSIGNED_ATHLETE_USERNAMES,
+)
 from apps.accounts.weight_class import competitive_weight_class_label
 from apps.athletes.models import PersonalRecord, ProgramCompletion
 from apps.programs.models import TrainingProgram
@@ -617,10 +626,10 @@ class HeadOrgSummaryTests(TestCase):
 
     def test_master_head_summary_includes_all_active_head_and_line_coaches(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
-            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='001_HeadCoach_one', password='longenoughpw1', user_type='head_coach',
         )
         line_under_agm = User.objects.create_user(
             username='005_Lineagm', password='longenoughpw1', user_type='coach',
@@ -642,8 +651,8 @@ class HeadOrgSummaryTests(TestCase):
         r = self.client.get(reverse('head-org-summary'))
         self.assertEqual(r.status_code, 200)
         by_user = {row['username']: row for row in r.json()['coaches']}
-        self.assertIn('117_HeadcoachGM', by_user)
-        self.assertIn('001_Headcoachone', by_user)
+        self.assertIn('117_HeadCoachGM', by_user)
+        self.assertIn('001_HeadCoach_one', by_user)
         self.assertIn('005_Lineagm', by_user)
         self.assertIn('006_Linegm', by_user)
         self.assertEqual(by_user['005_Lineagm']['athlete_count'], 1)
@@ -719,7 +728,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_multi_lane_agm_roster_uses_lane_ownership(self):
         agm = User.objects.create_user(
-            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='001_HeadCoach_one', password='longenoughpw1', user_type='head_coach',
         )
         OrgLaneAssignment.objects.create(prefix='001', head_coach=agm)
         OrgLaneAssignment.objects.create(prefix='002', head_coach=agm)
@@ -745,17 +754,17 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_skill_team_change_permissions_follow_downflow(self):
         gm = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
-            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='001_HeadCoach_one', password='longenoughpw1', user_type='head_coach',
         )
         OrgLaneAssignment.objects.create(prefix='001', head_coach=agm)
         line = User.objects.create_user(
-            username='008_Coachone', password='longenoughpw1', user_type='coach', reports_to=agm, org_lane_prefix='001',
+            username='008_Coach_eight', password='longenoughpw1', user_type='coach', reports_to=agm, org_lane_prefix='001',
         )
         athlete = User.objects.create_user(
-            username='000_Athlete1', password='longenoughpw1', user_type='athlete', primary_coach=line, org_lane_prefix='001',
+            username='000_Athlete_zero', password='longenoughpw1', user_type='athlete', primary_coach=line, org_lane_prefix='001',
         )
 
         self.client.force_authenticate(user=gm)
@@ -776,17 +785,17 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_skill_team_clear_respects_same_permissions_as_assign(self):
         gm = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
-            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='001_HeadCoach_one', password='longenoughpw1', user_type='head_coach',
         )
         OrgLaneAssignment.objects.create(prefix='001', head_coach=agm)
         line = User.objects.create_user(
-            username='008_Coachone', password='longenoughpw1', user_type='coach', reports_to=agm, org_lane_prefix='001',
+            username='008_Coach_eight', password='longenoughpw1', user_type='coach', reports_to=agm, org_lane_prefix='001',
         )
         athlete = User.objects.create_user(
-            username='000_Athlete1', password='longenoughpw1', user_type='athlete', primary_coach=line, org_lane_prefix='001',
+            username='000_Athlete_zero', password='longenoughpw1', user_type='athlete', primary_coach=line, org_lane_prefix='001',
         )
         athlete.skill_team = 'NOBLE'
         athlete.skill_team_updated_by = gm
@@ -805,18 +814,18 @@ class HeadRosterAssignmentTests(TestCase):
         blocked_clear = self.client.patch(reverse('head-athlete-skill-team', args=[athlete.id]), {'skill_team': 'NOBLE'}, format='json')
         self.assertEqual(blocked_clear.status_code, 403)
         prefixed_head = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         unassigned_head = User.objects.create_user(
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
         )
         prefixed_line = User.objects.create_user(
-            username='008_Coachone', password='longenoughpw1', user_type='coach',
+            username='008_Coach_eight', password='longenoughpw1', user_type='coach',
         )
         prefixed_line.reports_to = prefixed_head
         prefixed_line.save(update_fields=['reports_to'])
         prefixed_athlete = User.objects.create_user(
-            username='000_Athlete1', password='longenoughpw1', user_type='athlete',
+            username='000_Athlete_zero', password='longenoughpw1', user_type='athlete',
         )
         prefixed_athlete.primary_coach = prefixed_line
         prefixed_athlete.save(update_fields=['primary_coach'])
@@ -824,10 +833,10 @@ class HeadRosterAssignmentTests(TestCase):
         r = self.client.get(reverse('head-org-roster'))
         self.assertEqual(r.status_code, 200)
         j = r.json()
-        head_row = next(row for row in j['head_coaches'] if row['username'] == '117_HeadcoachGM')
+        head_row = next(row for row in j['head_coaches'] if row['username'] == '117_HeadCoachGM')
         unassigned_head_row = next(row for row in j['head_coaches'] if row['username'] == unassigned_head.username)
-        line_row = next(row for row in j['staff'] if row['username'] == '008_Coachone')
-        athlete_row = next(row for row in j['athletes'] if row['username'] == '000_Athlete1')
+        line_row = next(row for row in j['staff'] if row['username'] == '008_Coach_eight')
+        athlete_row = next(row for row in j['athletes'] if row['username'] == '000_Athlete_zero')
         for row in (head_row, line_row, athlete_row):
             self.assertEqual(row['org_prefix'], '117')
             self.assertEqual(row['org_label'], '117_MASTER_CHIEF')
@@ -838,7 +847,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_roster_marks_demo_unassigned_athlete_pool_as_xxx_unassigned(self):
         prefixed_head = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
             User.objects.create_user(
@@ -858,7 +867,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_assign_standalone_head_to_agm_category(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         standalone = User.objects.create_user(
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -876,7 +885,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_move_agm_head_to_unassigned_category(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
             username='001_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -894,7 +903,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_cannot_assign_occupied_agm_category(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         User.objects.create_user(
             username='001_Existingagm', password='longenoughpw1', user_type='head_coach',
@@ -914,7 +923,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_soft_delete_standalone_head(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         standalone = User.objects.create_user(
             username='118_Headcoachtwo', password='longenoughpw1', user_type='head_coach',
@@ -1195,7 +1204,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_reassign_active_athlete_outside_org(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         outside_head = User.objects.create_user(
             username='outside_head_reassign', password='longenoughpw1', user_type='head_coach',
@@ -1207,7 +1216,7 @@ class HeadRosterAssignmentTests(TestCase):
         outside.save(update_fields=['primary_coach'])
         t = self.client.post(
             reverse('token_obtain_pair'),
-            {'username': '117_HeadcoachGM', 'password': 'longenoughpw1'},
+            {'username': '117_HeadCoachGM', 'password': 'longenoughpw1'},
             format='json',
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
@@ -1222,10 +1231,10 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_assign_athlete_to_agm_head(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
-            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='001_HeadCoach_one', password='longenoughpw1', user_type='head_coach',
         )
         athlete = User.objects.create_user(
             username='021_agm_target', password='longenoughpw1', user_type='athlete',
@@ -1242,7 +1251,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_assign_athlete_to_line_coach_under_gm(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         line = User.objects.create_user(
             username='022_linegm', password='longenoughpw1', user_type='coach',
@@ -1264,10 +1273,10 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_assign_athlete_to_line_coach_under_agm(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         agm = User.objects.create_user(
-            username='001_Headcoachone', password='longenoughpw1', user_type='head_coach',
+            username='001_HeadCoach_one', password='longenoughpw1', user_type='head_coach',
         )
         line = User.objects.create_user(
             username='024_lineagm', password='longenoughpw1', user_type='coach',
@@ -1289,7 +1298,7 @@ class HeadRosterAssignmentTests(TestCase):
 
     def test_master_head_can_unassign_active_athlete_outside_org(self):
         master = User.objects.create_user(
-            username='117_HeadcoachGM', password='longenoughpw1', user_type='head_coach',
+            username='117_HeadCoachGM', password='longenoughpw1', user_type='head_coach',
         )
         outside_head = User.objects.create_user(
             username='outside_head_master_unassign', password='longenoughpw1', user_type='head_coach',
@@ -1403,9 +1412,9 @@ class DemoProvisioningTests(TestCase):
     def test_bare_base_assigns_ten_athletes_to_gm(self, _seed_history):
         result = provision_uat3_scenario(scenario='bare_base')
 
-        gm = User.objects.get(username='117_HeadcoachGM')
+        gm = User.objects.get(username='117_HeadCoachGM')
         self.assertEqual(result.athletes, 10)
-        self.assertEqual(User.objects.filter(user_type='head_coach').exclude(username='117_HeadcoachGM').count(), 0)
+        self.assertEqual(User.objects.filter(user_type='head_coach').exclude(username='117_HeadCoachGM').count(), 0)
         self.assertEqual(User.objects.filter(user_type='coach').count(), 0)
         self.assertEqual(User.objects.filter(user_type='athlete', primary_coach=gm).count(), 10)
 
@@ -1416,26 +1425,26 @@ class DemoPruneCommandTests(TestCase):
 
         from django.core.management import call_command
 
-        canonical_head = User.objects.create_user(
-            username='117_HeadcoachGM', password='pw', user_type='head_coach',
+        from apps.accounts.org_labels import (
+            DEMO_HEAD_COACH_USERNAMES,
+            DEMO_LINE_COACH_SLOT_B_USERNAMES,
+            DEMO_LINE_COACH_USERNAMES,
         )
-        for username in ('118_Headcoachtwo', '119_Headcoachthree', '120_Headcoachfour', '121_Headcoachone'):
+
+        for username in DEMO_HEAD_COACH_USERNAMES:
             User.objects.create_user(username=username, password='pw', user_type='head_coach')
-        canonical_coach = User.objects.create_user(
-            username='008_Coachone', password='pw', user_type='coach',
-        )
-        canonical_coach.reports_to = canonical_head
-        canonical_coach.save(update_fields=['reports_to'])
-        for username in ('013_Coachtwo', '048_Coachthree', '088_Coachtfour'):
-            extra_coach = User.objects.create_user(
-                username=username, password='pw', user_type='coach',
-            )
-            extra_coach.reports_to = canonical_head
-            extra_coach.save(update_fields=['reports_to'])
+        gm = User.objects.get(username='117_HeadCoachGM')
+        for username in (*DEMO_LINE_COACH_USERNAMES, *DEMO_LINE_COACH_SLOT_B_USERNAMES):
+            coach = User.objects.create_user(username=username, password='pw', user_type='coach')
+            coach.reports_to = gm
+            coach.save(update_fields=['reports_to'])
+        demo_coach = User.objects.get(username=DEMO_COACH_USERNAME)
         canonical_athlete = User.objects.create_user(
-            username='000_Athlete1', password='pw', user_type='athlete',
+            username=DEMO_ATHLETE_USERNAME,
+            password='pw',
+            user_type='athlete',
         )
-        canonical_athlete.primary_coach = canonical_coach
+        canonical_athlete.primary_coach = demo_coach
         canonical_athlete.save(update_fields=['primary_coach'])
         for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
             User.objects.create_user(username=username, password='pw', user_type='athlete')
@@ -1453,16 +1462,12 @@ class DemoPruneCommandTests(TestCase):
             stdout=StringIO(),
         )
 
-        self.assertTrue(User.objects.filter(username='117_HeadcoachGM').exists())
-        self.assertTrue(User.objects.filter(username='118_Headcoachtwo').exists())
-        self.assertTrue(User.objects.filter(username='119_Headcoachthree').exists())
-        self.assertTrue(User.objects.filter(username='120_Headcoachfour').exists())
-        self.assertTrue(User.objects.filter(username='121_Headcoachone').exists())
-        self.assertTrue(User.objects.filter(username='008_Coachone').exists())
-        self.assertTrue(User.objects.filter(username='013_Coachtwo').exists())
-        self.assertTrue(User.objects.filter(username='048_Coachthree').exists())
-        self.assertTrue(User.objects.filter(username='088_Coachtfour').exists())
-        self.assertTrue(User.objects.filter(username='000_Athlete1').exists())
+        self.assertTrue(User.objects.filter(username='117_HeadCoachGM').exists())
+        for username in DEMO_HEAD_COACH_USERNAMES:
+            self.assertTrue(User.objects.filter(username=username).exists())
+        for username in (*DEMO_LINE_COACH_USERNAMES, *DEMO_LINE_COACH_SLOT_B_USERNAMES):
+            self.assertTrue(User.objects.filter(username=username).exists())
+        self.assertTrue(User.objects.filter(username=DEMO_ATHLETE_USERNAME).exists())
         for username in DEMO_UNASSIGNED_ATHLETE_USERNAMES:
             self.assertTrue(User.objects.filter(username=username, primary_coach__isnull=True).exists())
         self.assertFalse(User.objects.filter(username='docker_UAT_coach_1').exists())
@@ -1543,3 +1548,93 @@ class HeadAnalyticsEndpointTests(TestCase):
         self._auth('line_ana')
         r = self.client.get(reverse('head-program-style-outcomes'))
         self.assertEqual(r.status_code, 403)
+
+
+class DemoProvisioningCoachTopologyTests(TestCase):
+    def test_preserve_current_two_line_coaches_per_lane(self):
+        from apps.accounts.canonical_usernames import agm_head_username
+
+        provision_uat3_scenario(scenario='preserve_current', replace_history=True)
+        lanes = ('001', '002', '003', '004')
+        for idx, lane in enumerate(lanes):
+            head = User.objects.get(username=agm_head_username(lane))
+            for uname in (DEMO_LINE_COACH_USERNAMES[idx], DEMO_LINE_COACH_SLOT_B_USERNAMES[idx]):
+                coach = User.objects.get(username=uname)
+                self.assertEqual(coach.user_type, 'coach')
+                self.assertEqual(coach.reports_to_id, head.id)
+                self.assertEqual(coach.org_lane_prefix, lane)
+
+
+class DemoProvisioningCompletionTests(TestCase):
+    def test_full_completion_entries_grid(self):
+        pdata = demo_provisioning_mod._program_data(date.today(), 0.72)
+        rng = random.Random(7)
+        profile = {'snatch': (80.0, 92.0), 'clean_jerk': (102.0, 118.0)}
+        out = demo_provisioning_mod.full_completion_entries(pdata, profile, rng)
+        entries = out['entries']
+        self.assertEqual(set(entries.keys()), {'0', '1', '2'})
+        for dk in entries:
+            self.assertEqual(len(entries[dk]), 2)
+            for cell in entries[dk].values():
+                self.assertTrue(cell['completed'])
+                self.assertIn('kg', cell['result'])
+
+    def test_partial_completion_entries_not_full(self):
+        pdata = demo_provisioning_mod._program_data(date.today(), 0.7)
+        rng = random.Random(99)
+        profile = {'snatch': (60.0, 70.0), 'clean_jerk': (75.0, 85.0)}
+        out = demo_provisioning_mod.partial_completion_entries(pdata, profile, rng)
+        flat_complete = sum(
+            1 for dk in out['entries'] for cell in out['entries'][dk].values() if cell['completed']
+        )
+        flat_total = sum(len(out['entries'][dk]) for dk in out['entries'])
+        self.assertGreater(flat_total, flat_complete)
+        self.assertGreater(flat_complete, 0)
+
+    def test_fully_loaded_program_and_completion_pattern(self):
+        provision_uat3_scenario(scenario='fully_loaded', replace_history=True)
+
+        athletes_with_programs = User.objects.filter(
+            user_type='athlete',
+            assigned_programs__normalized_name__icontains='uat3',
+        ).distinct()
+
+        self.assertGreaterEqual(athletes_with_programs.count(), 1)
+
+        def cell_stats(completion_data):
+            entries = completion_data.get('entries') or {}
+            total = complete = 0
+            for day in entries.values():
+                for cell in day.values():
+                    total += 1
+                    if cell.get('completed'):
+                        complete += 1
+            return complete, total
+
+        for athlete in athletes_with_programs:
+            programs = list(
+                TrainingProgram.objects.filter(
+                    athlete=athlete,
+                    normalized_name__icontains='uat3',
+                ).order_by('start_date', 'id'),
+            )
+            self.assertGreaterEqual(len(programs), 3)
+            self.assertLessEqual(len(programs), 13)
+            incomplete_rows = []
+            full_rows = []
+            for program in programs:
+                completion = ProgramCompletion.objects.filter(program=program, athlete=athlete).first()
+                self.assertIsNotNone(completion)
+                c, t = cell_stats(completion.completion_data)
+                self.assertGreater(t, 0)
+                if c == t:
+                    full_rows.append(completion)
+                else:
+                    incomplete_rows.append(completion)
+            self.assertEqual(len(incomplete_rows), 1, msg=f'athlete {athlete.username}')
+            self.assertEqual(len(full_rows), len(programs) - 1)
+            for completion in full_rows:
+                for day in completion.completion_data.get('entries', {}).values():
+                    for cell in day.values():
+                        self.assertTrue(cell.get('completed'))
+                        self.assertTrue(str(cell.get('result', '')).strip())

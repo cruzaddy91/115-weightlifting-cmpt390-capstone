@@ -90,7 +90,7 @@ UAT 3.0 schedule starts simple. UAT 4.0 can add:
 
 Use line-coach prefixes as coverage examples for coach-selected numbers and athlete auto-assignment availability:
 
-- `008_Coachone`
+- `008_Coach_eight`
 - `013_Coachtwo`
 
 These should help validate that athlete auto-assignment skips unavailable normal-member prefixes and that coach username selection respects available numbers.

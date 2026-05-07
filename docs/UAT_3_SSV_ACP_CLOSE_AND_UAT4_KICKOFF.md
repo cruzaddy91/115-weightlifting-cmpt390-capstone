@@ -16,7 +16,7 @@ It:
 2. Waits for backend (`/api/auth/me/` 401) and frontend (200).
 3. Runs **`prune_demo_users --apply --permanent-clean`** (before UAT) to reset canonical demo and strip UAT leftovers.
 4. Runs **`scripts/docker_uat.py`** and writes **`validation-reports/docker_uat_latest.json`**.
-5. Runs auth stress for `008_Coachone` and `000_Athlete1`.
+5. Runs auth stress for `008_Coach_eight` and `000_Athlete_zero`.
 6. Runs **prune again** (after UAT) and collects compose/log artifacts.
 
 **Artifacts to keep for a formal close** (under `validation-reports/`):

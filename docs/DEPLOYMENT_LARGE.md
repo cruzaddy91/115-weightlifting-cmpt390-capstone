@@ -34,7 +34,7 @@ When **`pkg_large`** is ready for stakeholders, run **UAT** against your staged 
    - [`docker-compose.large.yml`](../docker-compose.large.yml)
    - [`docker-compose.pkg_large.yml`](../docker-compose.pkg_large.yml)
 
-3. Open <http://localhost:4174>. **There are no seeded demo users** (`SEED_DEMO=false`). Register the first head coach / athletes via the app, or:
+3. Open <http://localhost:4174>. [`env.large.local.example`](../env.large.local.example) enables **`SEED_DEMO=true`** and **`UAT3_DEMO_SCENARIO=pkg_large`**, which provisions the canonical baseline roster (**1 GM + 4 AGM heads + 8 line coaches + 32 athletes**). If you set **`SEED_DEMO=false`** in `.env.pkg_large`, demo users are skipped — register via the app, or:
 
    ```bash
    docker compose -p pkg_large --env-file .env.pkg_large \
@@ -93,7 +93,8 @@ Defined in [`115-weightlifting/src/backend/config/settings.py`](../115-weightlif
 
 ## Demo data
 
-- **`SEED_DEMO=false`** (set by [`docker-compose.large.yml`](../docker-compose.large.yml)) skips demo provisioning. The automated SSVC harness in [`scripts/validate_docker_stack.sh`](../scripts/validate_docker_stack.sh) expects the **default** stack (`.env.example` + base compose only), not LARGE merge.
+- [`docker-compose.large.yml`](../docker-compose.large.yml) passes **`SEED_DEMO`** and **`UAT3_DEMO_SCENARIO`** from **`.env.pkg_large`** into the backend (Compose defaults **`false`** / **`preserve_current`** when those variables are unset). The localhost LARGE template turns seeding on and selects **`pkg_large`** so the full baseline roster loads deterministically.
+- [`scripts/validate_docker_stack.sh`](../scripts/validate_docker_stack.sh) still assumes the **default** demo stack (`.env.example` + base [`docker-compose.yml`](../docker-compose.yml) only); run SSVC separately from the pkg_large three-file merge.
 
 ## API throughput
 

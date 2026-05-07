@@ -22,25 +22,41 @@ from datetime import date
 
 
 DEFAULT_PASSWORD = os.getenv("DEMO_PASSWORD", "Passw0rd!123")
-MASTER_HEAD_USERNAME = "117_HeadcoachGM"
-SEEDED_COACH_USERNAME = "008_Coachone"
-SEEDED_ATHLETE_USERNAME = "000_Athlete1"
+MASTER_HEAD_USERNAME = "117_HeadCoachGM"
+SEEDED_COACH_USERNAME = "008_Coach_eight"
+SEEDED_ATHLETE_USERNAME = "000_Athlete_zero"
 SEEDED_UNASSIGNED_ATHLETE_USERNAMES = [
-    "005_Athlete2",
-    "006_Athlete3",
-    "007_Athlete4",
-    "009_Athlete5",
-    "010_Athlete6",
-    "011_Athlete7",
-    "012_Athlete8",
-    "014_Athlete9",
-    "015_Athlete10",
-    "016_Athlete11",
-    "017_Athlete12",
-    "018_Athlete13",
-    "019_Athlete14",
-    "020_Athlete15",
-    "021_Athlete16",
+    "005_Athlete_five",
+    "006_Athlete_six",
+    "007_Athlete_seven",
+    "009_Athlete_nine",
+    "010_Athlete_onezero",
+    "011_Athlete_oneone",
+    "012_Athlete_onetwo",
+    "014_Athlete_onefour",
+    "015_Athlete_onefive",
+    "016_Athlete_onesix",
+    "017_Athlete_oneseven",
+    "018_Athlete_oneeight",
+    "019_Athlete_onenine",
+    "020_Athlete_twozero",
+    "021_Athlete_twoone",
+    "026_Athlete_twosix",
+    "027_Athlete_twoseven",
+    "028_Athlete_twoeight",
+    "029_Athlete_twonine",
+    "030_Athlete_threezero",
+    "031_Athlete_threeone",
+    "032_Athlete_threetwo",
+    "033_Athlete_threethree",
+    "034_Athlete_threefour",
+    "035_Athlete_threefive",
+    "036_Athlete_threesix",
+    "037_Athlete_threeseven",
+    "038_Athlete_threeeight",
+    "039_Athlete_threenine",
+    "040_Athlete_fourzero",
+    "041_Athlete_fourone",
 ]
 
 
@@ -270,7 +286,7 @@ def main() -> int:
     # Line-coach registration requires PREFIX_rest where the numeric prefix is not yet used
     # by any username in the DB — fixed 090/091/… fails on repeat UAT runs.
     # Exclude seeded demo line prefixes (008, 013, 048, 088) — only 088 overlaps pool 60–89.
-    _demo_line_prefixes = {8, 13, 48, 88}
+    _demo_line_prefixes = {8, 13, 22, 23, 24, 25, 48, 88}
     _coach_prefix_pool = [n for n in range(60, 90) if n not in _demo_line_prefixes]
     random.shuffle(_coach_prefix_pool)
     _cp = _coach_prefix_pool[:4]
@@ -489,8 +505,8 @@ def main() -> int:
         ]
         check(
             results,
-            "15 seeded demo athletes show XXX_UNASSIGNED metadata",
-            len(seeded_unassigned_rows) == 15
+            "31 seeded demo athletes show XXX_UNASSIGNED metadata",
+            len(seeded_unassigned_rows) == 31
             and all(
                 row.get("primary_coach_id") is None
                 and row.get("org_label") == "XXX_UNASSIGNED"
@@ -538,14 +554,11 @@ def main() -> int:
             head_roster,
         )
         expected_head_pool = {
-            "118_Headcoachtwo",
-            "119_Headcoachthree",
-            "120_Headcoachfour",
-            "121_Headcoachone",
-            "001_Headcoachone",
-            "002_Headcoachtwo",
-            "003_Headcoachthree",
-            "004_Headcoachfour",
+            "117_HeadCoachGM",
+            "001_HeadCoach_one",
+            "002_HeadCoach_two",
+            "003_HeadCoach_three",
+            "004_HeadCoach_four",
         }
         check(
             results,
@@ -555,9 +568,9 @@ def main() -> int:
         )
         head_to_assign = (
             next((row for row in roster_head_rows if row.get("org_prefix") == "001"), None)
-            or next((row for row in roster_head_rows if row.get("username") == "121_Headcoachone"), None)
+            or next((row for row in roster_head_rows if row.get("username") == "001_HeadCoach_one"), None)
         )
-        head_to_delete = next((row for row in roster_head_rows if row.get("username") == "120_Headcoachfour"), None)
+        head_to_delete = next((row for row in roster_head_rows if row.get("username") == "004_HeadCoach_four"), None)
         matrix_athlete = next((row for row in roster_athlete_rows if row.get("username") == batch_athletes[0]), None)
         line_under_gm = next((row for row in roster_staff_rows if row.get("username") == SEEDED_COACH_USERNAME), None)
         line_to_move_under_agm = next((row for row in roster_staff_rows if row.get("username") == staff_reassign_coach), None)
@@ -573,7 +586,7 @@ def main() -> int:
             results,
             "assigned standalone head coach receives AGM metadata",
             isinstance(payload, dict)
-            and payload.get("username") == "001_Headcoachone"
+            and payload.get("username") == "001_HeadCoach_one"
             and payload.get("org_label") == "001_INFINITY",
             payload,
         )

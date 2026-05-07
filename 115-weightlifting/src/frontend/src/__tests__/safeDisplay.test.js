@@ -9,7 +9,7 @@ describe('programTitleForDisplay', () => {
   })
 
   it('passes through normal titles', () => {
-    expect(programTitleForDisplay('Current Block — 000_Athlete1')).toBe('Current Block — 000_Athlete1')
+    expect(programTitleForDisplay('Current Block — 000_Athlete_zero')).toBe('Current Block — 000_Athlete_zero')
     expect(programTitleForDisplay('Accumulation Block 3')).toBe('Accumulation Block 3')
   })
 

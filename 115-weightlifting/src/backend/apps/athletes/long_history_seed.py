@@ -27,6 +27,11 @@ User = get_user_model()
 # Includes the active Docker demo athlete plus archived legacy demo profiles.
 # The archived profiles remain only so old local data can be regenerated for analysis.
 ATHLETE_PROFILES: dict[str, dict] = {
+    '000_Athlete_zero': {
+        'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
+        'snatch': (118, 172), 'clean_jerk': (148, 212),
+    },
+    # Legacy alias (historical clones / old scripts).
     '000_Athlete1': {
         'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
         'snatch': (118, 172), 'clean_jerk': (148, 212),
@@ -334,13 +339,24 @@ def seed_longterm_for_usernames(
 
 
 def profile_for_skill_team(*, username: str, skill_team: str, gender: str, bodyweight_kg: Decimal | float | int) -> dict:
-    """Build a deterministic history profile for UAT3 generated athletes."""
+    """Build a deterministic history profile for UAT3 generated athletes.
+
+    skill_team drives simulation bands (snatch / clean & jerk training ranges at ~mid-elite bodyweight,
+    before gender/bodyweight scaling). Coarse tier flavor for demo UX:
+
+      NOBLE  -> PRO-class (~national/elite senior totals; rough USAW/IWF senior podium orbit near -81/-96 kg men).
+      RED    -> ADVANCED (~high-performance club / national qualifier trajectory).
+      SILVER -> NOVICE to early-intermediate (~structured club athlete building competition totals).
+      BLUE   -> ROOKIE (~first competition cycle; conservative Sn+CJ windows vs typical male -77 to -81 kg).
+
+    Numbers are intentional fiction for dashboards, not claiming exact federation classifications.
+    """
     rng = random.Random(hash(f'uat3-profile:{username}') & 0xFFFFFFFF)
     skill_ranges = {
-        'NOBLE': ((104, 134), (134, 169)),
-        'RED': ((80, 110), (102, 138)),
-        'SILVER': ((58, 86), (76, 108)),
-        'BLUE': ((35, 62), (48, 82)),
+        'NOBLE': ((108, 138), (138, 172)),
+        'RED': ((78, 108), (98, 132)),
+        'SILVER': ((52, 82), (68, 102)),
+        'BLUE': ((32, 58), (42, 72)),
     }
     sn_range, cj_range = skill_ranges.get(skill_team or 'BLUE', skill_ranges['BLUE'])
     bodyweight = float(bodyweight_kg or 75)
@@ -349,10 +365,10 @@ def profile_for_skill_team(*, username: str, skill_team: str, gender: str, bodyw
     start_sn = round(rng.uniform(*sn_range) * gender_factor * bw_factor, 1)
     start_cj = round(rng.uniform(*cj_range) * gender_factor * bw_factor, 1)
     growth = {
-        'NOBLE': rng.uniform(1.06, 1.16),
-        'RED': rng.uniform(1.12, 1.25),
-        'SILVER': rng.uniform(1.18, 1.34),
-        'BLUE': rng.uniform(1.25, 1.55),
+        'NOBLE': rng.uniform(1.04, 1.12),
+        'RED': rng.uniform(1.10, 1.22),
+        'SILVER': rng.uniform(1.14, 1.30),
+        'BLUE': rng.uniform(1.22, 1.48),
     }.get(skill_team or 'BLUE', rng.uniform(1.22, 1.5))
     return {
         'tier': skill_team.lower() if skill_team else 'unassigned',

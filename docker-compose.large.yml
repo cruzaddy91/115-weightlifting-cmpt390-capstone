@@ -14,7 +14,8 @@ services:
   backend:
     environment:
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
-      SEED_DEMO: "false"
+      SEED_DEMO: ${SEED_DEMO:-false}
+      UAT3_DEMO_SCENARIO: ${UAT3_DEMO_SCENARIO:-preserve_current}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-}
     mem_limit: 2g
     cpus: "2.0"

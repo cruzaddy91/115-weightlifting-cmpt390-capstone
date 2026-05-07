@@ -65,19 +65,21 @@ All demo accounts use this password:
 Passw0rd!123
 ```
 
-Suggested walkthrough accounts:
+Suggested walkthrough accounts (canonical shape `{XXX}_{HeadCoach|Coach|Athlete}_{verbal}`; `117_HeadCoachGM` is the only GM exception):
 
-| Role | Username | URL |
+| Role | Username(s) | URL |
 | --- | --- | --- |
-| GM head coach | `117_HeadcoachGM` | <http://localhost:4173/head> |
-| Standalone head coaches | `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachone` | <http://localhost:4173/head> |
-| Primary line coach | `008_Coachone` | <http://localhost:4173/coach> |
-| Demo line coaches | `013_Coachtwo`, `048_Coachthree`, `088_Coachtfour` | <http://localhost:4173/coach> |
-| Athlete | `000_Athlete1` | <http://localhost:4173/athlete> |
-| Unassigned athletes | `005_Athlete2` through `021_Athlete16`, skipping `008_` and `013_` because those prefixes belong to line coaches | <http://localhost:4173/athlete> |
+| GM head coach | `117_HeadCoachGM` | <http://localhost:4173/head> |
+| AGM lane heads (`001`–`004`) | `001_HeadCoach_one`, `002_HeadCoach_two`, `003_HeadCoach_three`, `004_HeadCoach_four` | <http://localhost:4173/head> |
+| Line coaches slot A | `008_Coach_eight`, `013_Coach_onethree`, `048_Coach_foureight`, `088_Coach_eighteight` | <http://localhost:4173/coach> |
+| Line coaches slot B | `022_Coach_twotwo`, `023_Coach_twothree`, `024_Coach_twofour`, `025_Coach_twofive` | <http://localhost:4173/coach> |
+| Primary demo athlete | `000_Athlete_zero` | <http://localhost:4173/athlete> |
+| Other seeded canon athletes | **31** accounts using prefixes `005`, `006`, `007`, `009`, …, `041` (normal-member slots only; coach/AGM prefixes are skipped — see `CANONICAL_ATHLETE_PREFIXES_32` in [`canonical_usernames.py`](115-weightlifting/src/backend/apps/accounts/canonical_usernames.py)) | <http://localhost:4173/athlete> |
 
-The `000_Athlete1` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
-The 15 unassigned athlete accounts are intentionally active with no accountable coach so the GM dashboard can exercise manual assignment to either a head coach or a line coach. They display with the `XXX_UNASSIGNED` organization tag until assigned.
+The **`pkg_large`** local merge (`env.large.local.example` → `.env.pkg_large`) seeds **`pkg_large`** provisioning by default: **1 GM + 4 AGM heads + 8 line coaches + 32 athletes** with the canonical naming rules above.
+
+The `000_Athlete_zero` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data (Docker compose defaults still run **`preserve_current`**; LARGE overrides usually run **`pkg_large`**).
+The **31** other seeded canon athletes are intentionally active with **no** accountable coach so the GM dashboard can exercise manual assignment to either a head coach or a line coach. They display with the `XXX_UNASSIGNED` organization tag until assigned.
 
 New accounts require a unique email address. Athlete registration accepts a base username and assigns the next available normal member prefix automatically (`000_`, then `005_` through `099_`). Line coaches must select an available normal member prefix from that same pool. Reserved GM/AGM organization prefixes (`001_`, `002_`, `003_`, `004_`, and `117_`) are blocked for normal coach and athlete accounts. Head coaches outside the `117` and `001-004` category lanes display with the `XXX_UNASSIGNED` organization tag until intentionally provisioned. Password reset is available from the login screen; in this Docker/local review build, reset emails are printed to backend logs instead of sent through a real SMTP provider.
 
@@ -140,7 +142,7 @@ The harness:
 - verifies email uniqueness and the password-reset flow;
 - checks RBAC denial paths for cross-coach and cross-athlete access;
 - verifies category/color metadata for the head-coach roster;
-- runs auth stress cycles for `008_Coachone` and `000_Athlete1`.
+- runs auth stress cycles for `008_Coach_eight` and `000_Athlete_zero`.
 
 Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.
 

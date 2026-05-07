@@ -1,7 +1,7 @@
 """Archive or permanently remove local demo users outside the canonical roster.
 
-Keeps canonical head coaches, canonical line coaches, **000_Athlete1**,
-and the unassigned demo athlete pool.
+Keeps canonical head coaches (GM + AGM), canonical line coaches (slot A/B),
+primary demo athlete, and the unassigned canonical athlete pool (31 rows).
 Staff and superusers are never archived/deleted. Run with ``--dry-run`` first.
 
 Default ``--apply`` behavior is non-destructive archive. Use ``--permanent-clean``
@@ -17,11 +17,13 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.accounts.canonical_usernames import LEGACY_USERNAME_TO_CANONICAL
 from apps.accounts.demo_provisioning import provision_uat3_scenario
 from apps.accounts.org_labels import (
     DEMO_ATHLETE_USERNAME,
     DEMO_COACH_USERNAME,
     DEMO_HEAD_COACH_USERNAMES,
+    DEMO_LINE_COACH_SLOT_B_USERNAMES,
     DEMO_LINE_COACH_USERNAMES,
     DEMO_UNASSIGNED_ATHLETE_USERNAMES,
     MASTER_HEAD_USERNAME,
@@ -32,8 +34,11 @@ User = get_user_model()
 
 
 def _assigned_head_variants(username: str) -> list[str]:
+    prefix = username.split('_', 1)[0]
+    if prefix in {'001', '002', '003', '004', '117'}:
+        return []
     suffix = username.split('_', 1)[1]
-    return [f'{prefix}_{suffix}' for prefix in ('001', '002', '003', '004')]
+    return [f'{lane}_{suffix}' for lane in ('001', '002', '003', '004')]
 
 
 def _migrate_user_identity(old_username: str, new_username: str) -> None:
@@ -69,11 +74,8 @@ def _release_demo_email(email: str, except_user=None):
 def _canonical_usernames() -> tuple[str, ...]:
     return (
         *DEMO_HEAD_COACH_USERNAMES,
-        '001_Headcoachone',
-        '002_Headcoachtwo',
-        '003_Headcoachthree',
-        '004_Headcoachfour',
         *DEMO_LINE_COACH_USERNAMES,
+        *DEMO_LINE_COACH_SLOT_B_USERNAMES,
         DEMO_ATHLETE_USERNAME,
         *DEMO_UNASSIGNED_ATHLETE_USERNAMES,
     )
@@ -124,18 +126,6 @@ def _cleanup_filter():
         '018_Athlete14',
         '019_Athlete15',
         '020_Athlete16',
-        '000_athelteone',
-        'jon_snow',
-        'arya_stark',
-        'tyrion_lannister',
-        'daenerys_targaryen',
-        'sansa_stark',
-        'frodo_baggins',
-        'samwise_gamgee',
-        'merry_brandybuck',
-        'pippin_took',
-        'gandalf_grey',
-        'Coachtwo',
     ]
     # Canonical-stress UAT athletes (Athlete17–Athlete35) share demo-style names but are not roster canon.
     uat_canonical_athletes = Q(
@@ -152,20 +142,21 @@ def _cleanup_filter():
 def _ensure_canonical_users(password: str) -> dict:
     created_or_updated = []
 
-    _migrate_user_identity('117_Headcoachone', MASTER_HEAD_USERNAME)
     _migrate_user_identity('121_Headcoachfive', '121_Headcoachone')
     _migrate_user_identity('001_Headcoachfive', '001_Headcoachone')
-    _migrate_user_identity('045_Coachone', '008_Coachone')
-    _migrate_user_identity('034_Coachtwo', '013_Coachtwo')
-    _migrate_user_identity('088_Coachthree', '048_Coachthree')
-    _migrate_user_identity('013_Coachfour', '088_Coachtfour')
+    for old_name, new_name in LEGACY_USERNAME_TO_CANONICAL:
+        _migrate_user_identity(old_name, new_name)
+    _migrate_user_identity('045_Coachone', DEMO_COACH_USERNAME)
+    _migrate_user_identity('034_Coachtwo', DEMO_LINE_COACH_USERNAMES[1])
+    _migrate_user_identity('088_Coachthree', DEMO_LINE_COACH_USERNAMES[2])
+    _migrate_user_identity('013_Coachfour', DEMO_LINE_COACH_USERNAMES[3])
 
     head_org, _ = User.objects.get_or_create(
         username=MASTER_HEAD_USERNAME,
         defaults={'user_type': 'head_coach'},
     )
     head_org.user_type = 'head_coach'
-    head_org.email = '117_headcoachgm@example.invalid'
+    head_org.email = f'{MASTER_HEAD_USERNAME.lower()}@example.invalid'
     head_org.reports_to = None
     head_org.is_active = True
     head_org.set_password(password)
@@ -208,7 +199,7 @@ def _ensure_canonical_users(password: str) -> dict:
         created_or_updated.append(username)
 
     line_coaches = {}
-    for username in DEMO_LINE_COACH_USERNAMES:
+    for username in (*DEMO_LINE_COACH_USERNAMES, *DEMO_LINE_COACH_SLOT_B_USERNAMES):
         coach, _ = User.objects.get_or_create(
             username=username,
             defaults={'user_type': 'coach'},
@@ -236,7 +227,7 @@ def _ensure_canonical_users(password: str) -> dict:
         defaults={'user_type': 'athlete'},
     )
     athlete.user_type = 'athlete'
-    athlete.email = '000_athlete1@example.invalid'
+    athlete.email = f'{DEMO_ATHLETE_USERNAME.lower()}@example.invalid'
     athlete.primary_coach = coach
     athlete.is_active = True
     athlete.set_password(password)
