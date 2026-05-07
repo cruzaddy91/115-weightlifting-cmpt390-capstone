@@ -411,7 +411,7 @@ class LongHistorySeedTests(TestCase):
     def setUp(self):
         # Username must match ATHLETE_PROFILES in long_history_seed for the command path.
         self.athlete = User.objects.create_user(
-            username='arya_stark', password='longenoughpw1', user_type='athlete',
+            username='000_Athlete1', password='longenoughpw1', user_type='athlete',
         )
 
     def test_build_pr_and_workout_rows_reasonable_volume(self):
@@ -422,7 +422,7 @@ class LongHistorySeedTests(TestCase):
         rng = random.Random(42)
         end = date(2026, 6, 1)
         start = end - timedelta(days=365)
-        profile = ATHLETE_PROFILES['arya_stark']
+        profile = ATHLETE_PROFILES['000_Athlete1']
         prs, logs = build_pr_and_workout_rows(
             athlete=self.athlete,
             profile=profile,
@@ -437,6 +437,6 @@ class LongHistorySeedTests(TestCase):
     def test_seed_longterm_command_runs_one_year(self):
         from django.core.management import call_command
 
-        call_command('seed_longterm_got_history', '--replace', '--years', '1', '--athletes', 'arya_stark')
+        call_command('seed_longterm_got_history', '--replace', '--years', '1', '--athletes', '000_Athlete1')
         self.assertGreater(PersonalRecord.objects.filter(athlete=self.athlete).count(), 20)
         self.assertGreater(WorkoutLog.objects.filter(athlete=self.athlete).count(), 30)

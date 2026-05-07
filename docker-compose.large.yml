@@ -1,0 +1,24 @@
+# Large-business-oriented overrides (tier branch convention: pkg_large).
+# Typical invocation — isolated project + env file (recommended):
+#   ./scripts/up_pkg_large.sh
+#
+# Manual three-file merge (Compose interpolate vars from --env-file .env.pkg_large):
+#   docker compose --env-file .env.pkg_large \
+#     -f docker-compose.yml -f docker-compose.large.yml -f docker-compose.pkg_large.yml up --build
+
+services:
+  postgres:
+    mem_limit: 1g
+    cpus: "1.0"
+
+  backend:
+    environment:
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      SEED_DEMO: "false"
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+    mem_limit: 2g
+    cpus: "2.0"
+
+  frontend:
+    mem_limit: 512m
+    cpus: "0.5"

@@ -1,13 +1,17 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { act } from 'react'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import HeadCoachDashboard from '../pages/HeadCoachDashboard'
 
 vi.mock('../utils/auth', () => ({
-  getCurrentUser: () => ({ id: 1, username: 'head', user_type: 'head_coach' }),
+  getCurrentUser: () => ({ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach' }),
 }))
 
 vi.mock('../services/api', () => ({
+  deleteHeadAthlete: vi.fn(),
+  deleteHeadCoach: vi.fn(),
+  deleteHeadStaff: vi.fn(),
   getHeadOrgSummary: vi.fn(),
   getHeadOrgRoster: vi.fn(),
   getHeadModelStatus: vi.fn(),
@@ -15,7 +19,9 @@ vi.mock('../services/api', () => ({
   getHeadProgramNameOutcomes: vi.fn(),
   getHeadRecommendations: vi.fn(),
   patchHeadAthletePrimaryCoach: vi.fn(),
-  patchHeadStaffLink: vi.fn(),
+  patchHeadAthleteSkillTeam: vi.fn(),
+  patchHeadCoachCategory: vi.fn(),
+  patchHeadStaffAssignment: vi.fn(),
   postHeadStaffInvite: vi.fn(),
 }))
 
@@ -26,13 +32,27 @@ import {
   getHeadProgramStyleOutcomes,
   getHeadProgramNameOutcomes,
   getHeadRecommendations,
+  postHeadStaffInvite,
 } from '../services/api'
 
-describe('HeadCoachDashboard analytics', () => {
+describe('HeadCoachDashboard UAT 3 shell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    getHeadOrgSummary.mockResolvedValue({ coaches: [] })
-    getHeadOrgRoster.mockResolvedValue({ staff: [], athletes: [] })
+    getHeadOrgSummary.mockResolvedValue({ coaches: [{ id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', athlete_count: 1, program_count: 1, personal_record_count: 1, workout_log_count: 1 }] })
+    getHeadOrgRoster.mockResolvedValue({
+      head_coaches: [
+        { id: 1, username: '117_HeadcoachGM', user_type: 'head_coach', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
+        { id: 4, username: '001_Headcoachone', user_type: 'head_coach', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver', owned_lane_prefixes: ['001'] },
+      ],
+      staff: [
+        { id: 2, username: '008_Coachone', user_type: 'coach', reports_to_id: 1, reports_to_username: '117_HeadcoachGM', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green' },
+        { id: 5, username: '013_Coachtwo', user_type: 'coach', reports_to_id: 4, reports_to_username: '001_Headcoachone', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver' },
+      ],
+      athletes: [
+        { id: 3, username: '000_Athlete1', primary_coach_id: 2, primary_coach_username: '008_Coachone', org_prefix: '117', org_label: '117_MASTER_CHIEF', org_color_key: 'sage-green', skill_team: 'NOBLE' },
+        { id: 6, username: '009_Athlete5', primary_coach_id: 5, primary_coach_username: '013_Coachtwo', org_prefix: '001', org_label: '001_INFINITY', org_color_key: 'gun-silver', skill_team: 'BLUE' },
+      ],
+    })
     getHeadModelStatus.mockResolvedValue({
       mode: 'model',
       has_model_artifact: true,
@@ -70,19 +90,102 @@ describe('HeadCoachDashboard analytics', () => {
     })
   })
 
-  it('renders analytics tables and recommendation cards', async () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('renders role-aware workspace tabs', async () => {
     render(
       <MemoryRouter>
         <HeadCoachDashboard />
       </MemoryRouter>,
     )
-    expect(await screen.findByRole('heading', { name: /De-identified analytics/i })).toBeTruthy()
-    expect(screen.getByText(/Program style outcomes/i)).toBeTruthy()
-    expect(screen.getByText(/peak strength/i)).toBeTruthy()
-    expect(screen.getByText(/Segment recommendations/i)).toBeTruthy()
-    expect(screen.getByText(/Engine mode/i)).toBeTruthy()
-    expect(screen.getAllByText(/^MODEL$/i).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/style:strength/i).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: /GM Head Coach command center/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /GM Head Coach/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /Line Coach/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /Schedule/i })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /Settings/i })).toBeTruthy()
+  })
+
+  it('opens settings and schedule MVP panels', async () => {
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /Settings/i }))
+    expect(screen.getByRole('heading', { name: /Settings/i })).toBeTruthy()
+    expect(screen.getByText(/Coach certifications/i)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('tab', { name: /Schedule/i }))
+    expect(screen.getByRole('heading', { name: /Schedule/i })).toBeTruthy()
+    expect(screen.getByText(/Weekly outlook/i)).toBeTruthy()
+  })
+
+  it('populates assigned AGM category tabs', async () => {
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /001_INFINITY/i }))
+    expect(screen.getAllByText(/@001_Headcoachone/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/@013_Coachtwo/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/@009_Athlete5/i).length).toBeGreaterThan(0)
+  })
+
+  it('renders athletes grouped by skill team labels', async () => {
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+
+    expect((await screen.findAllByText(/NOBLE TEAM/i)).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/BLUE TEAM/i).length).toBeGreaterThan(0)
+    expect(screen.getByLabelText(/Skill team for 000_Athlete1/i)).toBeTruthy()
+    expect(screen.getByLabelText(/Accountable coach for 000_Athlete1/i)).toBeTruthy()
+  })
+
+  it('shows assignment feedback as a hover-pausable toast', async () => {
+    vi.useFakeTimers()
+    postHeadStaffInvite.mockResolvedValue({ id: 99, username: 'new_line' })
+
+    render(
+      <MemoryRouter>
+        <HeadCoachDashboard />
+      </MemoryRouter>,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    fireEvent.change(screen.getByPlaceholderText(/Line coach username/i), {
+      target: { value: 'new_line' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Add to org/i }))
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const toast = screen.getByRole('status')
+    expect(toast.textContent).toContain('Linked @new_line.')
+
+    fireEvent.mouseEnter(toast)
+    act(() => {
+      vi.advanceTimersByTime(7000)
+    })
+    expect(screen.getByRole('status')).toBeTruthy()
+
+    fireEvent.mouseLeave(toast)
+    act(() => {
+      vi.advanceTimersByTime(4500)
+    })
+    expect(screen.queryByRole('status')).toBeNull()
   })
 })
 

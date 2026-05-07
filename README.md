@@ -20,6 +20,43 @@ Then open:
 
 The first backend startup runs migrations and, by default, seeds demo data because `SEED_DEMO=true` in `.env.example`.
 
+### Deployment tiers by Git branch (convention)
+
+**Sandbox** work stays informal on **`main`**, topic branches, or your integration line (e.g. **`dev/ssvc-acp-cabinet`**). Nothing here defines or creates a separate “sandbox” Git branch — use whatever workflow you already prefer.
+
+**Packaging** branches carry tier-specific deployment layouts:
+
+| Branch | Focus |
+| --- | --- |
+| **`pkg_large`** | **Large-scale deployment package** — current priority. Uses LARGE Compose merge ([`docker-compose.large.yml`](docker-compose.large.yml)), [`env.large.example`](env.large.example), and [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md). Run stakeholder **UAT** from artifacts committed on **`pkg_large`**. |
+| **`pkg_medium`** | Medium-tier deployment layout (**planned**). |
+| **`pkg_small`** | Small-tier deployment layout (**planned**). |
+
+Nothing in this repository creates or pushes Git branches automatically.
+
+**Git note:** while **`dev/ssvc-acp-cabinet`** exists, Git cannot also hold a sibling branch named exactly **`dev`** — only rename/move integration branches if you need that literal name.
+
+**Integration baseline:** document whether **`dev/ssvc-acp-cabinet`** or **`main`** is canonical until **`pkg_large`** is promoted — avoid silent divergence.
+
+**Mini-sprint rhythm:** after each sprint on your integration branch (or **`pkg_large`** prep), run [`scripts/validate_docker_stack.sh`](scripts/validate_docker_stack.sh) on `.env.example` plus base **`docker-compose.yml`**. Inspect **`docker_validation_summary_latest.md`** and companion JSON under **`validation-reports/`** (directory is gitignored — fine for local metrics). At **ACP**, point **`pkg_large`** at the commit that passed SSVC and your LARGE checklist in [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md).
+
+### Large-business stack (`pkg_large`)
+
+**Run the LARGE package now (isolated Compose project, does not touch demo `.env`):**
+
+```bash
+./scripts/up_pkg_large.sh
+```
+
+- Uses `.env.pkg_large` (created from [`env.large.local.example`](env.large.local.example); gitignored).
+- **`COMPOSE_PROJECT_NAME=pkg_large`** so Postgres volume/network does not collide with a demo stack on the default project name.
+- **Alternate host ports** — UI **http://localhost:4174**, API **http://localhost:8001**, Postgres **localhost:5433** — so you do **not** need to stop the demo stack on **4173 / 8000 / 5432** (change ports via **`PKG_LARGE_HOST_*`** in `.env.pkg_large` if these clash).
+- **`DEBUG=False`**, multi-worker Gunicorn, **no demo seed** — database starts empty; register via the UI or `docker compose exec` `createsuperuser` (see [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md)).
+
+Production-shaped hosts/TLS/SMTP: copy [`env.large.example`](env.large.example) into `.env.pkg_large` (or your secrets store), merge the same three Compose files, and place Django behind HTTPS.
+
+See [`docs/DEPLOYMENT_LARGE.md`](docs/DEPLOYMENT_LARGE.md) for TLS, `SECRET_KEY`, `DATABASE_URL`, and email checklist items.
+
 ## Demo Credentials
 
 All demo accounts use this password:
@@ -32,11 +69,17 @@ Suggested walkthrough accounts:
 
 | Role | Username | URL |
 | --- | --- | --- |
-| Head coach | `Headcoachone` | <http://localhost:4173/head> |
-| Line coach | `Coachone` | <http://localhost:4173/coach> |
-| Athlete | `jon_snow` | <http://localhost:4173/athlete> |
+| GM head coach | `117_HeadcoachGM` | <http://localhost:4173/head> |
+| Standalone head coaches | `118_Headcoachtwo`, `119_Headcoachthree`, `120_Headcoachfour`, `121_Headcoachone` | <http://localhost:4173/head> |
+| Primary line coach | `008_Coachone` | <http://localhost:4173/coach> |
+| Demo line coaches | `013_Coachtwo`, `048_Coachthree`, `088_Coachtfour` | <http://localhost:4173/coach> |
+| Athlete | `000_Athlete1` | <http://localhost:4173/athlete> |
+| Unassigned athletes | `005_Athlete2` through `021_Athlete16`, skipping `008_` and `013_` because those prefixes belong to line coaches | <http://localhost:4173/athlete> |
 
-The `jon_snow` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
+The `000_Athlete1` account is seeded with assigned programs, workout logs, personal records, and completion records so the athlete dashboard has meaningful data.
+The 15 unassigned athlete accounts are intentionally active with no accountable coach so the GM dashboard can exercise manual assignment to either a head coach or a line coach. They display with the `XXX_UNASSIGNED` organization tag until assigned.
+
+New accounts require a unique email address. Athlete registration accepts a base username and assigns the next available normal member prefix automatically (`000_`, then `005_` through `099_`). Line coaches must select an available normal member prefix from that same pool. Reserved GM/AGM organization prefixes (`001_`, `002_`, `003_`, `004_`, and `117_`) are blocked for normal coach and athlete accounts. Head coaches outside the `117` and `001-004` category lanes display with the `XXX_UNASSIGNED` organization tag until intentionally provisioned. Password reset is available from the login screen; in this Docker/local review build, reset emails are printed to backend logs instead of sent through a real SMTP provider.
 
 ## Access Control Expectations
 
@@ -55,7 +98,7 @@ The seeded users are demo accounts for exercising each role. The core access rul
 | Service | Purpose |
 | --- | --- |
 | `postgres` | PostgreSQL 16 database with a persistent Docker volume. |
-| `backend` | Django REST backend served by Gunicorn on port `8000`. |
+| `backend` | Django REST backend served by Gunicorn on port `8000` (default worker count is configurable via `GUNICORN_WORKERS`; see `docker-compose.large.yml`). |
 | `frontend` | React/Vite frontend served by Vite preview on port `4173`. |
 
 Useful commands:
@@ -92,9 +135,12 @@ The harness:
 - starts the Postgres, backend, and frontend containers;
 - waits for backend and frontend readiness;
 - verifies the seeded demo accounts;
+- runs SSVC cleanup so old Docker/UAT/demo leftovers are permanently removed while canonical demo users remain;
 - runs an API UAT flow for program creation, assignment, completion, workout logs, PRs, and Sinclair analytics;
+- verifies email uniqueness and the password-reset flow;
 - checks RBAC denial paths for cross-coach and cross-athlete access;
-- runs auth stress cycles for `Coachone` and `jon_snow`.
+- verifies category/color metadata for the head-coach roster;
+- runs auth stress cycles for `008_Coachone` and `000_Athlete1`.
 
 Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.
 
@@ -116,10 +162,18 @@ Important settings:
 ```text
 115_weightlifting_CMPT390_Capstone/
 ├── docker-compose.yml
+├── docker-compose.large.yml      # LARGE overrides (workers, limits)
+├── docker-compose.pkg_large.yml # backend env_file → .env.pkg_large
 ├── .env.example
+├── env.large.example            # production-shaped LARGE env template
+├── env.large.local.example      # localhost LARGE template → .env.pkg_large
+├── docs/
+│   └── DEPLOYMENT_LARGE.md      # checklist + pkg_large bring-up
 ├── LICENSE
 ├── README.md
-├── scripts/            # Docker smoke/stress validation harness
+├── scripts/
+│   ├── validate_docker_stack.sh  # demo-stack SSVC
+│   └── up_pkg_large.sh           # bring up pkg_large Compose project
 └── 115-weightlifting/
     ├── src/backend/      # Django REST API, Dockerfile, Docker entrypoint
     ├── src/frontend/     # React/Vite app, Dockerfile

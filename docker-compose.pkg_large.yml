@@ -1,0 +1,23 @@
+# LARGE package: alternate published ports so the demo stack can stay on
+# 5432 / 8000 / 4173 at the same time (different Compose project name).
+# Override host ports via .env.pkg_large: PKG_LARGE_HOST_POSTGRES_PORT, etc.
+#
+# ./scripts/up_pkg_large.sh
+#
+# Default URLs: frontend http://localhost:4174  API http://localhost:8001
+# Postgres on host port 5433 (optional sql shell from host).
+
+services:
+  postgres:
+    ports:
+      - "${PKG_LARGE_HOST_POSTGRES_PORT:-5433}:5432"
+
+  backend:
+    env_file:
+      - .env.pkg_large
+    ports:
+      - "${PKG_LARGE_HOST_BACKEND_PORT:-8001}:8000"
+
+  frontend:
+    ports:
+      - "${PKG_LARGE_HOST_FRONTEND_PORT:-4174}:4173"

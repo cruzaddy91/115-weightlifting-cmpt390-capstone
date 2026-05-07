@@ -31,7 +31,7 @@ python manage.py collectstatic --noinput
 
 if [ "$(printf '%s' "${SEED_DEMO:-false}" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
   echo "Seeding demo data..."
-  python manage.py shell < docker_seed_demo.py
+  python manage.py provision_uat3_demo "${UAT3_DEMO_SCENARIO:-preserve_current}"
 fi
 
 exec "$@"

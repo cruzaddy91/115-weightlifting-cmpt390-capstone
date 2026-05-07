@@ -9,6 +9,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# Bakes production bundle; after changing React/CSS run: docker compose build frontend --no-cache
 RUN npm run build
 
 EXPOSE 4173

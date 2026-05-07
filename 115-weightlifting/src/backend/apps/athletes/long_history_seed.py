@@ -24,10 +24,13 @@ from .models import PersonalRecord, WorkoutLog
 
 User = get_user_model()
 
-# Mirrors tools/sim/populate_history.py so charts stay tier-distinct.
-# bodyweight_kg + gender for these usernames must match tools/sim/character_sim_profiles.py
-# (HTTP seed uses the same numbers for IWF class labels).
+# Includes the active Docker demo athlete plus archived legacy demo profiles.
+# The archived profiles remain only so old local data can be regenerated for analysis.
 ATHLETE_PROFILES: dict[str, dict] = {
+    '000_Athlete1': {
+        'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
+        'snatch': (118, 172), 'clean_jerk': (148, 212),
+    },
     'jon_snow': {
         'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
         'snatch': (118, 172), 'clean_jerk': (148, 212),
@@ -48,8 +51,7 @@ ATHLETE_PROFILES: dict[str, dict] = {
         'tier': 'advanced', 'bodyweight_kg': 71, 'gender': 'F',
         'snatch': (58, 86), 'clean_jerk': (72, 106),
     },
-    # Coachtwo / lord-of-the-rings roster (first five names). bodyweight_kg + gender
-    # must match tools/sim/character_sim_profiles.py.
+    # Archived legacy demo profiles retained for historical data regeneration.
     'frodo_baggins': {
         'tier': 'pro', 'bodyweight_kg': 58, 'gender': 'M',
         'snatch': (82, 98), 'clean_jerk': (100, 120),
@@ -329,3 +331,33 @@ def seed_longterm_for_usernames(
         deleted_prs=deleted_prs,
         deleted_workouts=deleted_workouts,
     )
+
+
+def profile_for_skill_team(*, username: str, skill_team: str, gender: str, bodyweight_kg: Decimal | float | int) -> dict:
+    """Build a deterministic history profile for UAT3 generated athletes."""
+    rng = random.Random(hash(f'uat3-profile:{username}') & 0xFFFFFFFF)
+    skill_ranges = {
+        'NOBLE': ((104, 134), (134, 169)),
+        'RED': ((80, 110), (102, 138)),
+        'SILVER': ((58, 86), (76, 108)),
+        'BLUE': ((35, 62), (48, 82)),
+    }
+    sn_range, cj_range = skill_ranges.get(skill_team or 'BLUE', skill_ranges['BLUE'])
+    bodyweight = float(bodyweight_kg or 75)
+    gender_factor = 0.72 if gender == 'F' else 1.0
+    bw_factor = max(0.72, min(1.18, bodyweight / 82.0))
+    start_sn = round(rng.uniform(*sn_range) * gender_factor * bw_factor, 1)
+    start_cj = round(rng.uniform(*cj_range) * gender_factor * bw_factor, 1)
+    growth = {
+        'NOBLE': rng.uniform(1.06, 1.16),
+        'RED': rng.uniform(1.12, 1.25),
+        'SILVER': rng.uniform(1.18, 1.34),
+        'BLUE': rng.uniform(1.25, 1.55),
+    }.get(skill_team or 'BLUE', rng.uniform(1.22, 1.5))
+    return {
+        'tier': skill_team.lower() if skill_team else 'unassigned',
+        'bodyweight_kg': bodyweight_kg,
+        'gender': gender,
+        'snatch': (start_sn, round(start_sn * growth, 1)),
+        'clean_jerk': (start_cj, round(start_cj * growth, 1)),
+    }
