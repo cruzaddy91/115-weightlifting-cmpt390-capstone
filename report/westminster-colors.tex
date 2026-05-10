@@ -1,0 +1,48 @@
+% Westminster University brand palette (matches westminster_poster_palette.py)
+\usepackage{xcolor}
+\definecolor{wuNight}{HTML}{211551}
+\definecolor{wuCopper}{HTML}{9D581F}
+\definecolor{wuSky}{HTML}{00B5E2}
+\definecolor{wuThistle}{HTML}{8252C7}
+\definecolor{wuFlint}{HTML}{101820}
+\definecolor{wuBirch}{HTML}{F1F1DE}
+
+% Section styling via KOMA (avoids extra titlesec package in minimal TeX installs)
+\setkomafont{section}{\normalfont\bfseries\color{wuNight}\LARGE}
+\setkomafont{subsection}{\normalfont\bfseries\color{wuNight}\large}
+
+% Suppress auto \maketitle block; titlepage.tex provides our custom cover page
+\let\maketitle\relax
+
+% Absolute-position image overlays (used for logo on references page)
+\usepackage{eso-pic}
+\usepackage{graphicx}
+% Hyperlink color: Thistle
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=wuThistle, urlcolor=wuSky, citecolor=wuCopper}
+
+% Caption styling — per-type label color so Figure vs Table partition visually.
+\usepackage[font=small]{caption}
+\captionsetup[figure]{labelfont={bf,color=wuCopper}}
+\captionsetup[table]{labelfont={bf,color=wuNight}}
+
+\newcommand{\figref}[1]{\textcolor{wuCopper}{Figure~\ref*{#1}}}
+\newcommand{\tabref}[1]{\textcolor{wuNight}{Table~\ref*{#1}}}
+\newcommand{\includereportfig}[1]{%
+  \includegraphics[width=\linewidth,height=0.46\textheight,keepaspectratio]{#1}}
+\newcommand{\includereportfigtall}[1]{%
+  \includegraphics[width=\linewidth,height=0.36\textheight,keepaspectratio]{#1}}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\usepackage{float}
+\floatplacement{figure}{H}
+\floatplacement{table}{H}
+\usepackage{booktabs}
+
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\dbltopfraction}{0.92}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.75}
+\renewcommand{\dblfloatpagefraction}{0.75}

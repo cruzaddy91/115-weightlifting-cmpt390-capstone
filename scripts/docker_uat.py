@@ -3,6 +3,10 @@
 
 Uses only the HTTP surface exposed by docker-compose so the test matches a
 professor's clone/build/run workflow instead of local virtualenv assumptions.
+
+Deep SSVC: when you add new acceptance rows here, extend scripts/ssvc_uat_required_names.txt
+for stable substrings and raise scripts/ssvc_uat_floor.txt to the new json "total" so the
+suite cannot shrink without a deliberate edit.
 """
 
 from __future__ import annotations

@@ -1,5 +1,9 @@
 # 115 Weightlifting CMPT-390 Capstone
 
+| Field | Detail |
+| --- | --- |
+| **Instructor** | Dr. Hu Helen |
+
 115 Weightlifting is a full-stack capstone project for Olympic weightlifting coaches and athletes. It supports role-aware dashboards for head coaches, line coaches, and athletes; structured training program creation and assignment; athlete workout completion; personal record tracking; charts; roster analytics; and Sinclair scoring.
 
 This repository is the professor-facing, Docker-ready version of the project. It is intended to be cloned and launched locally with Docker Compose, without requiring a local Python, Node, or PostgreSQL setup.
@@ -122,29 +126,56 @@ docker compose down -v
 docker compose logs -f backend
 ```
 
-## Smoke / Stress Validation
+## Smoke / stress validation (Docker SSVC)
 
-After the stack is running, or from a fresh clone, run the Docker-first validation harness:
+From a fresh clone (or anytime dependencies change), run the closed-loop Docker harness:
 
 ```bash
-scripts/validate_docker_stack.sh
+./scripts/validate_docker_stack.sh
 ```
 
-The harness:
+It creates `.env` if needed, validates `docker compose config`, brings up Postgres/backend/frontend, waits for `/api/auth/me/` and the SPA, runs `prune_demo_users` before and after, executes `docker_uat.py` (full HTTP acceptance + RBAC + bundle fingerprint), runs JWT auth stress loops (`STRESS_CYCLES`, default **25**), and writes evidence under `validation-reports/` (usually gitignored).
 
-- creates `.env` from `.env.example` if needed;
-- validates `docker compose config`;
-- starts the Postgres, backend, and frontend containers;
-- waits for backend and frontend readiness;
-- verifies the seeded demo accounts;
-- runs SSVC cleanup so old Docker/UAT/demo leftovers are permanently removed while canonical demo users remain;
-- runs an API UAT flow for program creation, assignment, completion, workout logs, PRs, and Sinclair analytics;
-- verifies email uniqueness and the password-reset flow;
-- checks RBAC denial paths for cross-coach and cross-athlete access;
-- verifies category/color metadata for the head-coach roster;
-- runs auth stress cycles for `008_Coach_eight` and `000_Athlete_zero`.
+## Deep SSVC (smoke, stress, validate, clean-audit)
 
-Generated validation output is written to `validation-reports/`, which is intentionally ignored by Git.
+Use this before a major merge or portfolio freeze when you want more than the Docker UAT loop alone:
+
+```bash
+chmod +x scripts/run_deep_ssvc.sh scripts/ssvc_clean_audit.sh scripts/ssvc_sync_uat_floor.sh
+STRESS_CYCLES=60 ./scripts/run_deep_ssvc.sh
+```
+
+Phases:
+
+| Phase | What |
+| --- | --- |
+| **Smoke** | `docker compose config` parse; `security_gate.py` on tracked files (no running stack). |
+| **Stress + stack** | Same as [`scripts/validate_docker_stack.sh`](scripts/validate_docker_stack.sh): compose up, UAT JSON, JWT stress (override `STRESS_CYCLES`, default **60** in `run_deep_ssvc`). |
+| **Validate** | `manage.py test` in `backend`, `npm test` (Vitest) in `frontend` (expects the stack still running). |
+| **Manifest** | `ssvc_verify_manifest.py`: UAT must be green; **required** check substrings in [`scripts/ssvc_uat_required_names.txt`](scripts/ssvc_uat_required_names.txt). Count floor in [`scripts/ssvc_uat_floor.txt`](scripts/ssvc_uat_floor.txt): **0** disables shrink detection until you lock it. |
+| **Clean (audit)** | Writes `validation-reports/ssvc_clean_audit_latest.txt` (deprecation grep hits, sample `pass` stubs); does not delete code. |
+
+**Lock the UAT count bar** after a green `validate_docker_stack` (optional but recommended for regression discipline):
+
+```bash
+./scripts/ssvc_sync_uat_floor.sh
+```
+
+**When you add a feature**, add at least one new assertion in `scripts/docker_uat.py` and add a stable substring to `scripts/ssvc_uat_required_names.txt` so the manifest fails until the new surface is covered.
+
+```text
+scripts/
+├── validate_docker_stack.sh   # demo-stack SSVC (compose + UAT + stress + prune)
+├── run_deep_ssvc.sh           # smoke + stack + Django tests + Vitest + manifest + clean audit
+├── ssvc_verify_manifest.py    # UAT JSON gates
+├── ssvc_uat_floor.txt         # 0 = off; sync after green run to lock count
+├── ssvc_uat_required_names.txt
+├── ssvc_sync_uat_floor.sh     # set floor from docker_uat_latest.json
+├── ssvc_clean_audit.sh        # deprecation / stub report only
+├── docker_uat.py
+├── docker_auth_stress.py
+└── security_gate.py
+```
 
 ## Environment
 
@@ -173,14 +204,33 @@ Important settings:
 │   └── DEPLOYMENT_LARGE.md      # checklist + pkg_large bring-up
 ├── LICENSE
 ├── README.md
+├── assets/                       # Branding (Westminster logo, used by report titlepage)
+├── report/                       # Quarto source + rendered PDF for the capstone write-up
 ├── scripts/
 │   ├── validate_docker_stack.sh  # demo-stack SSVC
+│   ├── run_deep_ssvc.sh          # full smoke / stress / validate / manifest / clean audit
+│   ├── docker_uat.py
+│   ├── ssvc_verify_manifest.py
+│   ├── ssvc_uat_floor.txt
+│   ├── ssvc_uat_required_names.txt
+│   ├── ssvc_sync_uat_floor.sh
+│   ├── ssvc_clean_audit.sh
 │   └── up_pkg_large.sh           # bring up pkg_large Compose project
 └── 115-weightlifting/
     ├── src/backend/      # Django REST API, Dockerfile, Docker entrypoint
     ├── src/frontend/     # React/Vite app, Dockerfile
     └── README.md         # Source directory note
 ```
+
+## Final Report
+
+The capstone write-up lives under [`report/`](report/):
+
+- Source: [`report/CMPT390_115_Report.qmd`](report/CMPT390_115_Report.qmd) (Quarto, two-column scrartcl)
+- Rendered: `report/output/CMPT390_115_Report.pdf`
+- Re-render with `quarto render report/CMPT390_115_Report.qmd --to pdf`
+
+Brand assets and the Westminster logo used by the report titlepage live under [`assets/png/`](assets/png/).
 
 ## Notes On Production
 

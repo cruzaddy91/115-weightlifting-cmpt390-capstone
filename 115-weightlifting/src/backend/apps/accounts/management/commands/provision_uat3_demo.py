@@ -1,4 +1,5 @@
 import json
+import django.apps
 
 from django.core.management.base import BaseCommand, CommandError
 

@@ -34,10 +34,12 @@ logs/
 media/
 staticfiles/
 validation-reports/
+.docker_home/
 
 # Local generated course artifacts
 *.docx
 *.pdf
+!report/output/CMPT390_115_Report.pdf
 *.pptx
 *.xlsx
 ~$*

@@ -1,0 +1,623 @@
+% Options for packages loaded elsewhere
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  letterpaper,
+  DIV=11,
+  numbers=noendperiod]{scrartcl}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+% Make \paragraph and \subparagraph free-standing
+\makeatletter
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}{
+    \@ifstar
+      \xxxParagraphStar
+      \xxxParagraphNoStar
+  }
+  \newcommand{\xxxParagraphStar}[1]{\oldparagraph*{#1}\mbox{}}
+  \newcommand{\xxxParagraphNoStar}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}{
+    \@ifstar
+      \xxxSubParagraphStar
+      \xxxSubParagraphNoStar
+  }
+  \newcommand{\xxxSubParagraphStar}[1]{\oldsubparagraph*{#1}\mbox{}}
+  \newcommand{\xxxSubParagraphNoStar}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+\makeatother
+
+
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+
+
+% definitions for citeproc citations
+\NewDocumentCommand\citeproctext{}{}
+\NewDocumentCommand\citeproc{mm}{%
+  \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+\makeatletter
+ % allow citations to break across lines
+ \let\@cite@ofmt\@firstofone
+ % avoid brackets around text for \cite:
+ \def\@biblabel#1{}
+ \def\@cite#1#2{{#1\if@tempswa , #2\fi}}
+\makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newenvironment{CSLReferences}[2] % #1 hanging-indent, #2 entry-spacing
+ {\begin{list}{}{%
+  \setlength{\itemindent}{0pt}
+  \setlength{\leftmargin}{0pt}
+  \setlength{\parsep}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+   \setlength{\leftmargin}{\cslhangindent}
+   \setlength{\itemindent}{-1\cslhangindent}
+  \fi
+  % set entry spacing
+  \setlength{\itemsep}{#2\baselineskip}}}
+ {\end{list}}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+
+
+
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+
+
+ 
+
+
+\KOMAoption{captions}{tableheading}
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Table of contents}
+\else
+  \newcommand\contentsname{Table of contents}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{List of Figures}
+\else
+  \newcommand\listfigurename{List of Figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{List of Tables}
+\else
+  \newcommand\listtablename{List of Tables}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figure}
+\else
+  \newcommand\figurename{Figure}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Table}
+\else
+  \newcommand\tablename{Table}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Listing}
+\newcommand*\listoflistings{\listof{codelisting}{List of Listings}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={115 Weightlifting},
+  pdfauthor={Addy Cruz},
+  pdfkeywords={Olympic weightlifting, full-stack web, Django
+REST, React, JWT, role-based access, Sinclair scoring, capstone},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+
+\title{115 Weightlifting}
+\usepackage{etoolbox}
+\makeatletter
+\providecommand{\subtitle}[1]{% add subtitle to \maketitle
+  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
+}
+\makeatother
+\subtitle{Coach Programming, Athlete Execution, and Performance
+Tracking}
+\author{Addy Cruz}
+\date{2026-05-09}
+\begin{document}
+\maketitle
+
+
+\section*{Abstract}\label{abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+Small Olympic weightlifting teams often split programs, athlete logs,
+personal records, and review notes across spreadsheets, messages, and ad
+hoc files. 115 Weightlifting is a full-stack web application that
+centralizes role-aware workflows for head coaches, line coaches, and
+athletes: structured weekly programs, completion tracking, workout
+history, personal-record charts, roster aggregates, and Sinclair-aware
+analytics (International Weightlifting Federation 2026a, 2026b). The
+stack pairs a React and Vite frontend with a Django REST backend, JWT
+authentication, and a local SQLite workflow with PostgreSQL-ready
+configuration (Meta Open Source 2026; Vite Contributors 2026; Django
+Software Foundation 2026; Encode OSS Ltd. 2026; Jazzband 2026; SQLite
+Consortium 2026; PostgreSQL Global Development Group 2026). The
+repository records nineteen dated implementation milestones and thirteen
+dated issue resolutions, which this report uses as evidence that the
+delivered system matches iterative engineering work rather than a
+paper-only design.
+
+\section{Introduction}\label{introduction}
+
+Olympic weightlifting depends on structured cycles, repeated exposure to
+the competition lifts, accessory work, and progressive loading. Coaches
+need to see what was assigned, what was completed, how personal records
+move, and whether training volume and intensity align with intent.
+Athletes need a simple daily view of prescribed work and a reliable way
+to log outcomes. When that information is fragmented, coordination
+across multiple coaches degrades and review meetings lose a single
+source of truth.
+
+115 Weightlifting targets that fragmentation directly. It is not a
+generic fitness tracker; it encodes the relationship between head coach,
+line coaches, and athletes, and it bakes in weightlifting-specific
+concepts such as snatch, clean and jerk, total, competitive bodyweight
+class, and Sinclair scoring.
+
+\subsection{Research Question}\label{research-question}
+
+The project asks one question:
+
+\textbf{Q1.} Can a role-aware web application unify coach programming,
+athlete execution, and progress analytics for a small Olympic
+weightlifting team, with enough testing and operational tooling to
+support confident demonstration and handoff?
+
+The headline capstone result is the answer to Q1, grounded in the
+feature set, validation artifacts, and limitations described in the
+sections that follow.
+
+\section{Industry or Organization
+Partner}\label{industry-or-organization-partner}
+
+This capstone is implemented as a reproducible, version-controlled
+repository with Docker-first local launch for faculty evaluation. There
+is no formal industry sponsor and no production deployment bound to an
+external organization. The ``partner'\,' role is played by the coaching
+workflow itself: requirements were derived from real team operations,
+then scoped to what a single-term capstone can complete without
+compromising depth on program assignment, logging, and analytics.
+
+\section{Methods}\label{methods}
+
+\subsection{Architecture and roles}\label{architecture-and-roles}
+
+The system uses a conventional client-server split. The frontend is a
+React application built with Vite and React Router, with Chart.js for
+time-series and comparison charts (Meta Open Source 2026; Vite
+Contributors 2026; Chart.js Contributors 2026). The backend is Django
+with Django REST Framework and SimpleJWT for bearer-token authentication
+(Django Software Foundation 2026; Encode OSS Ltd. 2026; Jazzband 2026).
+The default developer and demo workflow uses SQLite; environment
+configuration supports PostgreSQL for production-shaped deployments
+(SQLite Consortium 2026; PostgreSQL Global Development Group 2026).
+
+Role-aware routing exposes three primary dashboards: \texttt{/head} for
+organization-level rollups, \texttt{/coach} for program authoring and
+assignment, and \texttt{/athlete} for consumption, completion, and
+personal analytics. A protected-route layer checks the authenticated
+user and redirects away from unauthorized areas. This design keeps
+policy close to the UI surface while the API enforces ownership and role
+rules server side.
+
+\subsection{Data modeling for flexible
+programs}\label{data-modeling-for-flexible-programs}
+
+Training programs store structured weekly content as JSON so the program
+builder can represent blocks, days, exercises, sets, repetitions,
+percentages, and notes without forcing every nested element into its own
+relational table. Programs remain assignable, versionable on the server,
+and joinable to athlete completion records and workout logs. The
+tradeoff, discussed later, is that some aggregate queries become
+application-level rather than a single SQL join.
+
+\Needspace{14\baselineskip}
+\begin{strip}
+\noindent\begin{minipage}{\textwidth}
+\centering
+\small
+\begin{tabular}{lp{0.58\textwidth}}
+\toprule
+\textbf{Layer} & \textbf{Responsibility} \\
+\midrule
+React client & JWT-aware API client, dashboards, charts, program editor UX \\
+Django REST & Users, programs, assignments, logs, PRs, analytics endpoints \\
+Persistence & SQLite by default; PostgreSQL URL for large-tier compose \\
+Operations & Docker Compose, seed scripts, \texttt{./bin/zw} automation \\
+\bottomrule
+\end{tabular}
+\captionof{table}{High-level responsibilities by layer. The same decomposition is documented in the repository README and deployment guides.}
+\label{tbl-layers}
+\end{minipage}
+\end{strip}
+\FloatBarrier
+
+\subsection{Verification strategy}\label{verification-strategy}
+
+Verification combines automated tests, a scripted user-acceptance flow
+against a running stack, and manual multi-browser checks during demo
+preparation. Frontend and backend test suites cover authentication,
+interceptors, program templates, normalization utilities, and analytics
+endpoints. A bundled UAT script exercises registration, coach program
+create and update, athlete completion, workout logs, personal records,
+and the Sinclair calculation path end to end.
+
+\section{Results}\label{results}
+
+\subsection{Delivered feature set}\label{delivered-feature-set}
+
+The shipping application includes JWT login and registration, role-aware
+navigation, coach-side program create, edit, reassign, and inspect
+flows, athlete-side assigned-program views with completion persistence,
+workout log and personal record APIs, head-coach rollups, and
+weightlifting analytics including monthly bests, rolling peak totals,
+roster aggregates, competitive weight class context, and Sinclair
+scoring (International Weightlifting Federation 2026b).
+
+\subsection{Demo database scale}\label{demo-database-scale}
+
+\tabref{tbl-demo} summarizes representative counts from the seeded demo
+database used for charts, roster views, and completion analytics. These
+are not production populations; they exist to prove the UI under
+realistic volume.
+
+\Needspace{14\baselineskip}
+\begin{strip}
+\noindent\begin{minipage}{\textwidth}
+\centering
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Count} \\
+\midrule
+Users & 67 \\
+Head coaches & 2 \\
+Line coaches & 3 \\
+Athletes & 61 \\
+Training programs & 90 \\
+Program completion records & 62 \\
+Workout logs & 6,387 \\
+Personal records & 1,103 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Seeded demo counts at the time of the final report draft. Numbers fluctuate slightly if seed scripts change between commits.}
+\label{tbl-demo}
+\end{minipage}
+\end{strip}
+\FloatBarrier
+
+\subsection{Implementation cadence}\label{implementation-cadence}
+
+Nineteen dated milestones from late January through mid March 2026 move
+from environment setup to authentication, program APIs, athlete logging,
+analytics, demo tooling, UI facelift, and a documented API hardening
+backlog. \tabref{tbl-milestones} lists anchor dates; the repository
+feature log carries the full table with evidence notes.
+
+\Needspace{18\baselineskip}
+\begin{strip}
+\noindent\begin{minipage}{\textwidth}
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Window} & \textbf{Theme} \\
+\midrule
+2026-01-29 to 2026-02-14 & Skeleton, auth, models, first end-to-end login to programs \\
+2026-02-15 to 2026-02-23 & Program CRUD and assignment, athlete dashboards, MVP integration \\
+2026-03-01 to 2026-03-11 & Completion flow, Sinclair wiring, self-host scripts, UI pass, UAT \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Condensed milestone themes. The authoritative dated log lives alongside course deliverables in the shared capstone workspace.}
+\label{tbl-milestones}
+\end{minipage}
+\end{strip}
+\FloatBarrier
+
+\subsection{Testing and scripted UAT}\label{testing-and-scripted-uat}
+
+The project currently lists twenty-one frontend test files and four
+backend test files. Static counts report on the order of 128 frontend
+test cases and 109 backend test methods, for roughly 237 automated
+checks in total, spanning auth, API contracts, spreadsheet-style program
+editing, charts, and analytics.
+
+The scripted UAT flow that ships with the repository recorded a full
+pass of nineteen checks after the late-stage API stabilization work,
+covering registration and login, \texttt{/auth/me}, coach program create
+and update, athlete completion retrieval and save, workout logs,
+personal records, and the Sinclair endpoint. Separately, an auth stress
+report from April 24, 2026, ran eight login and logout cycles for a
+coach persona with zero failures, addressing an early project risk
+around token attachment and session stability.
+
+\Needspace{12\baselineskip}
+\begin{strip}
+\noindent\begin{minipage}{\textwidth}
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Artifact} & \textbf{Outcome} \\
+\midrule
+\texttt{./bin/zw uat} (late capstone) & 19 / 19 checks passed \\
+Auth stress (2026-04-24) & 8 / 8 cycles passed \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Representative scripted validation results. Re-run commands are documented in repository operator notes.}
+\label{tbl-uat}
+\end{minipage}
+\end{strip}
+\FloatBarrier
+
+\subsection{Issue resolution pattern}\label{issue-resolution-pattern}
+
+Thirteen dated issues from January 31 through March 11, 2026, cluster
+into familiar full-stack themes: API base URL alignment, JWT header
+consistency, CORS configuration, serializer contract mismatches between
+coach forms and the backend, persistence for athlete logs,
+DisallowedHost behavior in automated smoke tests, local self-host
+dependency gaps, and presentation-time diagram rendering. Each entry
+pairs a symptom with a resolution date, which is how this report treats
+debugging as a first-class deliverable.
+
+\section{Discussion}\label{discussion}
+
+\subsection{Why JSON program
+documents}\label{why-json-program-documents}
+
+Storing program structure as JSON keeps the program builder flexible for
+coach-authored variations without migrations for every new prescription
+pattern. The API can still enforce ownership, assignment, and
+referential integrity for programs, athletes, and completion rows. The
+cost is heavier client responsibility for validation and more complex
+server-side reporting if future work needs deep SQL analytics across
+nested exercises. For the capstone window, the tradeoff favored
+iteration speed and demo fidelity.
+
+\subsection{Role separation versus
+convenience}\label{role-separation-versus-convenience}
+
+Head, coach, and athlete routes intentionally duplicate almost no UI
+code paths. That duplication is a conscious readability choice for
+grading and maintenance: each dashboard optimizes for its persona rather
+than forcing a single configurable mega-view. The downside is that
+shared widgets must be refactored carefully when visual design changes,
+which showed up during the March UI facelift milestone.
+
+\subsection{Analytics scope}\label{analytics-scope}
+
+Charts and Sinclair tooling are designed as planning aids, not
+predictive sports-science models. Peak and rhythm views use conservative
+heuristics so coaches are not presented with false precision. That
+restraint is a product decision tied to trust: a coach who disagrees
+with a chart should still trust the underlying logged numbers.
+
+\section{Limitations}\label{limitations}
+
+The first limitation is scope relative to the original proposal:
+meet-day attempt management and richer competition workflows were
+deferred so that programming, logging, and analytics could reach
+production-quality depth inside one term.
+
+The second limitation is deployment posture. The professor-facing
+repository emphasizes Docker Compose and documented environment
+variables, but it does not ship managed hosting, backups, or monitoring.
+A real club deployment would need onboarding, account lifecycle, and
+data migration plans beyond the seeded demo.
+
+The third limitation is usability evaluation depth. Structured
+third-party usability sessions with recorded task times were not
+completed to publication standard by the draft date of this PDF. Manual
+walkthroughs during demo preparation did validate that three-browser,
+three-role presentations are feasible, and course review feedback should
+be folded into the next usability pass.
+
+\section{Conclusion and Future Work}\label{conclusion-and-future-work}
+
+115 Weightlifting answers Q1 affirmatively within academic scope: it
+delivers a coherent, role-aware system that connects coach programming
+to athlete execution and surfaces weightlifting-specific analytics,
+backed by automated tests, scripted UAT, and a transparent issue
+history.
+
+Future work naturally splits into operations and product lanes.
+Operations would add hardened hosting, HTTPS, secrets management,
+backups, and observability. Product work would deepen periodization
+tooling, coach commentary on logs, notifications, optional meet-day
+modules, and first-class spreadsheet import and export for coaches who
+still live in Excel during transition.
+
+\clearpage
+
+\section{Code and Data Availability}\label{code-and-data-availability}
+
+All application source, Docker definitions, validation drivers, and this
+Quarto report live in the version-controlled capstone repository at the
+repository root and under \texttt{115-weightlifting/}. Quick launch for
+reviewers is \texttt{docker compose up --build} with \texttt{.env}
+copied from \texttt{.env.example}; large-tier layout and ports are
+documented under \texttt{docs/}. Operator automation for local workflows
+is exposed through \texttt{./bin/zw}. Demo credentials and role
+walkthrough accounts are listed in the README. Course narrative
+artifacts, including the long-form dated feature and issue logs
+referenced throughout this report, are maintained in the CMPT-390 shared
+workspace deliverables tree alongside this repository.
+
+\section{Acknowledgements}\label{acknowledgements}
+
+I thank the Westminster University Computer Science and Data Science
+faculty for the capstone structure, code review habits, and systems
+thinking that made a full-stack term project tractable. The
+instructional scaffolding around iteration, testing, and honest scoping
+is reflected directly in the milestone and issue logs cited here.
+
+Open-source libraries used include React (Meta Open Source 2026), Vite
+(Vite Contributors 2026), Django (Django Software Foundation 2026),
+Django REST Framework (Encode OSS Ltd. 2026), SimpleJWT (Jazzband 2026),
+and Chart.js (Chart.js Contributors 2026). Token handling follows common
+JWT practice (Jones et al. 2015).
+
+\clearpage
+
+\AddToShipoutPictureFG*{%
+  \put(\LenToUnit{6.9in},\LenToUnit{2.7in}){%
+    \rotatebox{90}{\includegraphics[width=5.0in]{../assets/png/WU_Logo_Horz_Copper-2000x323-2602323276.png}}%
+  }%
+}
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
+
+\protect\phantomsection\label{refs}
+\begin{CSLReferences}{1}{1}
+\bibitem[\citeproctext]{ref-chartjs}
+Chart.js Contributors. 2026. \emph{Chart.js Documentation}.
+\href{https://www.chartjs.org/docs/latest/}{Https://www.chartjs.org/docs/latest/}.
+
+\bibitem[\citeproctext]{ref-django}
+Django Software Foundation. 2026. \emph{Django Documentation}.
+\href{https://docs.djangoproject.com/}{Https://docs.djangoproject.com/}.
+
+\bibitem[\citeproctext]{ref-drf}
+Encode OSS Ltd. 2026. \emph{Django {REST} Framework}.
+\href{https://www.django-rest-framework.org/}{Https://www.django-rest-framework.org/}.
+
+\bibitem[\citeproctext]{ref-iwf}
+International Weightlifting Federation. 2026a. \emph{International
+Weightlifting Federation: Competition Resources}.
+\href{https://iwf.sport/}{Https://iwf.sport/}.
+
+\bibitem[\citeproctext]{ref-sinclair}
+International Weightlifting Federation. 2026b. \emph{Sinclair
+Coefficient Resources}.
+\href{https://iwf.sport/weightlifting_/sinclair-coefficient/}{Https://iwf.sport/weightlifting\_/sinclair-coefficient/}.
+
+\bibitem[\citeproctext]{ref-simplejwt}
+Jazzband. 2026. \emph{Django {REST} Framework {SimpleJWT}}.
+\href{https://django-rest-framework-simplejwt.readthedocs.io/}{Https://django-rest-framework-simplejwt.readthedocs.io/}.
+
+\bibitem[\citeproctext]{ref-jones2015jwt}
+Jones, Michael, John Bradley, and Nat Sakimura. 2015. \emph{{JSON} Web
+Token ({JWT})}. RFC No. 7519. Internet Engineering Task Force.
+\url{https://www.rfc-editor.org/rfc/rfc7519}.
+
+\bibitem[\citeproctext]{ref-react}
+Meta Open Source. 2026. \emph{React}.
+\href{https://react.dev/}{Https://react.dev/}.
+
+\bibitem[\citeproctext]{ref-postgresql}
+PostgreSQL Global Development Group. 2026. \emph{{PostgreSQL}
+Documentation}.
+\href{https://www.postgresql.org/docs/}{Https://www.postgresql.org/docs/}.
+
+\bibitem[\citeproctext]{ref-sqlite}
+SQLite Consortium. 2026. \emph{{SQLite} Documentation}.
+\href{https://www.sqlite.org/docs.html}{Https://www.sqlite.org/docs.html}.
+
+\bibitem[\citeproctext]{ref-vite}
+Vite Contributors. 2026. \emph{Vite}.
+\href{https://vite.dev/}{Https://vite.dev/}.
+
+\end{CSLReferences}
+
+
+
+
+\end{document}

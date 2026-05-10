@@ -1,0 +1,5 @@
+# Each non-comment line must appear as a substring of at least one UAT result name.
+# When you add a major feature, add a stable substring from its check name here.
+frontend bundle includes head skill-roster
+Sinclair analytics endpoint responds
+RBAC coach A cannot read athlete B PRs
