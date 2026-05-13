@@ -17,6 +17,6 @@ quarto render CMPT390_115_Report.qmd --to pdf
 ./report/render_pdf_docker.sh
 ```
 
-The DATA 470 report pins Word fonts (Times New Roman, etc.). This project’s `_quarto.yml` omits those lines so the same Docker recipe compiles on Linux images; if you want an exact font match on macOS, add `mainfont`, `sansfont`, and `monofont` under `format.pdf` like [DATA-470 `_quarto.yml`](../../DATA-470_DSCapstone/report/_quarto.yml) and render locally.
+The DATA 470 report pins Word fonts (Times New Roman, etc.). This project’s `_quarto.yml` omits those lines so the same Docker recipe compiles on Linux images; if you want an exact font match on macOS, add `mainfont`, `sansfont`, and `monofont` under `format.pdf` like [DATA-470 `_quarto.yml`](../../data-470-dscapstone/report/_quarto.yml) and render locally.
 
 Output PDF: `output/CMPT390_115_Report.pdf`.

@@ -193,7 +193,7 @@ Important settings:
 ## Project Layout
 
 ```text
-115_weightlifting_CMPT390_Capstone/
+115-weightlifting-cmpt390-capstone/
 ├── docker-compose.yml
 ├── docker-compose.large.yml      # LARGE overrides (workers, limits)
 ├── docker-compose.pkg_large.yml # backend env_file → .env.pkg_large
