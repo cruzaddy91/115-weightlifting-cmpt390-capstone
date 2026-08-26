@@ -1,0 +1,51 @@
+# Repo archetype declaration. Read by automation/repo-audit/.
+# Declared, not detected: the repo says what it is, the audit never guesses.
+#
+# Three ecosystems in separate subtrees under 115-weightlifting/src/, so the root
+# is `composite` and each half is validated against its own archetype with the
+# prefix stripped. Detection suggested a flat `python-service`, which would have
+# missed the frontend entirely and found no manifest at all, because the scorer
+# only looks at the repo root or at declared component paths.
+archetype: composite
+ecosystem: none
+
+components:
+  # Django. `manage.py`, `apps/`, `config/` at the component root, no src/ and no
+  # tests/ directory: Django's own layout, not a deviation from it. Tests live
+  # inside each app as Django expects.
+  - path: 115-weightlifting/src/backend
+    archetype: python-service
+    exceptions:
+      - rule: layout.required_dir
+        reason: >-
+          Django convention places manage.py, apps/, and config/ at the project
+          root rather than under src/, and puts tests inside each app instead of
+          a top-level tests/. Restructuring to satisfy python-service would mean
+          fighting the framework for a scorer.
+
+  # Vite plus React. Has src/, package.json, and package-lock.json, so js-app
+  # applies cleanly with nothing waived. This component is also what satisfies
+  # pinned_deps for the whole repo: the lockfile was always there, the scorer
+  # just could not see it while the repo was undeclared.
+  - path: 115-weightlifting/src/frontend
+    archetype: js-app
+    exceptions: []
+
+  # Notebooks, models, scripts, and utils. python-data wants both src/ and
+  # notebooks/; this tree has notebooks/ and organises code by role instead.
+  - path: 115-weightlifting/src/data-science
+    archetype: python-data
+    exceptions:
+      - rule: layout.required_dir
+        reason: >-
+          notebooks/ is present, src/ is not. Code is organised by role
+          (models/, scripts/, utils/) which is a normal shape for an analysis
+          tree attached to an application rather than a standalone package.
+
+# Deviations are DECLARED, never silently tolerated.
+#
+# Empty at the root for now. If structure_gate.py starts reporting
+# naming.directories violations against the snake_case Django packages, that is
+# the same non-component-aware gate limitation documented at length in
+# work/manka-farrier-dashboard/.repo-archetype.yml, and the same waiver applies.
+exceptions: []
